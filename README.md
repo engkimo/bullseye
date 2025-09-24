@@ -2,6 +2,8 @@
 
 実務レベルの日本語文書処理を実現する統合AIシステム。OCR、レイアウト解析、表構造認識、読み順推定、LLM連携を提供。
 
+<img width="3024" height="1702" alt="image" src="https://github.com/user-attachments/assets/2ee70864-ceaf-4969-bdb9-0888a76788c5" />
+
 **上流モデル群と互換性のある独自実装システム（bullseye統合）**
 
 ## Features
@@ -225,7 +227,7 @@ bash scripts/dev_frontend.sh
 ### Local Setup
 
 ```bash
-git clone https://github.com/your-org/docja.git
+git clone https://github.com/engkimo/bullseye.git
 cd docja
 make setup-local
 source venv/bin/activate
@@ -480,6 +482,6 @@ Licensed under the Apache License, Version 2.0. See the LICENSE file for details
   title={DocJA: Japanese Document AI System},
   author={Your Organization},
   year={2025},
-  url={https://github.com/your-org/docja}
+  url={https://github.com/engkimo/bullseye.git}
 }
 ```
