@@ -1,5 +1,12 @@
 # BullsEye - 日本語 Document AI Integration System
 
+![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.2-EE4C2C.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.111.0-009688.svg)
+![CUDA](https://img.shields.io/badge/CUDA-12.1-green.svg)
+![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB.svg)
+
 実務レベルの日本語文書処理を実現する統合AIシステム。OCR、レイアウト解析、表構造認識、読み順推定、LLM連携を提供。
 
 <img width="3024" height="1702" alt="image" src="https://github.com/user-attachments/assets/2ee70864-ceaf-4969-bdb9-0888a76788c5" />
