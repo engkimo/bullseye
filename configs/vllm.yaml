@@ -1,0 +1,122 @@
+# vLLM serving configuration
+
+model:
+  # Base model
+  model_name: gpt-oss-20B
+  tokenizer: gpt-oss-20B
+  
+  # LoRA adapter
+  enable_lora: true
+  lora_modules:
+    - name: docja
+      path: weights/lora/adapter
+      
+  # Model loading
+  trust_remote_code: true
+  dtype: float16
+  
+  # Quantization (adjust based on GPU)
+  quantization: bitsandbytes  # Options: awq, gptq, bitsandbytes, none
+
+server:
+  # API settings
+  host: 0.0.0.0
+  port: 8000
+  allow_credentials: false
+  allow_origins: ["*"]
+  allow_methods: ["*"]
+  allow_headers: ["*"]
+  
+  # SSL (optional)
+  ssl_keyfile: null
+  ssl_certfile: null
+
+engine:
+  # GPU memory utilization
+  gpu_memory_utilization: 0.9
+  
+  # Sequence lengths
+  max_model_len: 8192
+  max_num_seqs: 256
+  max_num_batched_tokens: 8192
+  
+  # KV cache
+  kv_cache_dtype: float16
+  
+  # Parallelism
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  
+  # Scheduling
+  max_num_batched_tokens: null
+  max_paddings: 256
+  
+  # Swap space (CPU offloading)
+  swap_space: 4  # GiB
+  
+  # Other optimizations
+  use_v2_block_manager: true
+  enable_prefix_caching: true
+
+# Hardware-specific configs
+hardware_configs:
+  l4_24gb:
+    gpu_memory_utilization: 0.9
+    max_model_len: 8192
+    quantization: bitsandbytes
+    
+  a10g_24gb:
+    gpu_memory_utilization: 0.9
+    max_model_len: 8192
+    quantization: bitsandbytes
+    
+  a100_40gb:
+    gpu_memory_utilization: 0.85
+    max_model_len: 16384
+    quantization: none
+    
+  h100_80gb:
+    gpu_memory_utilization: 0.8
+    max_model_len: 32768
+    quantization: none
+
+# Request processing
+request:
+  # Timeout
+  timeout_keep_alive: 5
+  
+  # Rate limiting
+  max_concurrent_requests: 256
+  
+  # Request validation
+  max_input_length: 8192
+  max_total_tokens: 16384
+
+# Logging
+logging:
+  level: INFO
+  access_log: true
+  
+  # Metrics
+  disable_log_stats: false
+  disable_log_requests: false
+
+# Health check
+health_check:
+  endpoint: /health
+  
+# Metrics endpoint (Prometheus compatible)
+metrics:
+  endpoint: /metrics
+  
+# API compatibility
+api_compatibility:
+  # OpenAI API compatibility
+  openai_compatible: true
+  
+  # Custom endpoints
+  custom_endpoints:
+    - path: /v1/docja/analyze
+      description: Document analysis endpoint
+    - path: /v1/docja/extract
+      description: Information extraction endpoint

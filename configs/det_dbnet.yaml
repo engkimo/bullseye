@@ -1,0 +1,118 @@
+# DBNet++ configuration for text detection
+
+model:
+  name: dbnet++
+  backbone: resnet50  # resnet18, resnet50, mobilenetv3
+  neck:
+    type: fpn
+    out_channels: 256
+  head:
+    type: dbnet
+    k: 50  # differentiable binarization factor
+    use_asff: true  # adaptive scale feature fusion
+
+data:
+  # 明示指定（推奨）: COCO互換の画像ディレクトリとアノテーションJSON
+  images_dir: data/det/images       # 例: data/det/images
+  annotations: data/det/annotations.json  # 例: data/det/annotations.json
+  batch_size: 8
+  num_workers: 4
+  short_side: 1024   # 短辺固定→32の倍数丸め
+  
+  # Image augmentation
+  train_transform:
+    - type: resize
+      size: [640, 640]
+      keep_ratio: true
+    - type: random_rotate
+      angle_range: [-10, 10]
+    - type: random_crop
+      size: [640, 640]
+    - type: color_jitter
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+    - type: normalize
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+  
+  val_transform:
+    - type: resize
+      size: [640, 640]
+      keep_ratio: true
+    - type: normalize
+      mean: [0.485, 0.456, 0.406]
+      std: [0.229, 0.224, 0.225]
+
+training:
+  epochs: 10
+  optimizer:
+    type: AdamW
+    lr: 0.001
+    weight_decay: 0.0001
+  
+  scheduler:
+    type: CosineAnnealingLR
+    T_max: 300
+    eta_min: 0.00001
+  
+  warmup:
+    epochs: 5
+    factor: 0.1
+  
+  loss:
+    alpha: 1.0  # threshold loss weight
+    beta: 10.0  # binary loss weight
+    ohem_ratio: 3.0  # online hard example mining
+  
+  # Gradient clipping
+  clip_grad_norm: 5.0
+  
+  # Mixed precision
+  use_amp: true
+  
+  # Checkpointing
+  save_steps: 1000
+  save_total_limit: 3
+  eval_steps: 0
+
+  # Target generation options
+  targets:
+    shrink_ratio: 0.4          # 収縮比（DBNet近似）
+    use_shrink_prob: true      # gt_probを収縮領域で作成
+    thresh_per_instance: true  # しきい値マップをインスタンスごとに距離正規化
+  
+  # Early stopping
+  early_stopping_patience: 20
+  early_stopping_threshold: 0.001
+
+evaluation:
+  # Metrics
+  metrics:
+    - precision
+    - recall
+    - f1
+    - hmean
+  
+  # Post-processing
+  postprocess:
+    box_thresh: 0.7
+    max_candidates: 1000
+    unclip_ratio: 1.5
+    min_size: 3
+
+inference:
+  # Test time augmentation
+  tta:
+    enable: false
+    transforms:
+      - type: rotate
+        angles: [0, 90, 180, 270]
+      - type: flip
+        directions: [horizontal, vertical]
+  
+  # Multi-scale testing
+  scales: [0.5, 1.0, 1.5]
+  
+  # NMS
+  nms_threshold: 0.2

@@ -1,0 +1,149 @@
+# ABINet configuration for text recognition
+
+model:
+  name: abinet
+  max_len: 80
+  num_classes: 7500  # Including special tokens
+  
+  # Vision model
+  vision:
+    hidden_dim: 512
+    backbone: resnet45  # custom ResNet for text
+    
+  # Language model  
+  language:
+    hidden_dim: 256
+    num_layers: 4
+    nhead: 8
+    
+  # Fusion
+  fusion:
+    use_fusion: true
+    
+  # Iterative correction
+  num_iterations: 3
+
+data:
+  train_dataset: synthdog_ja  # not used by train_rec.py; kept for reference
+  val_dataset: synthdog_ja    # not used by train_rec.py; kept for reference
+  images_dir: data/rec/lines_pre_w480
+  alt_images_dir: data/rec/lines
+  labels: data/rec/labels.normalized.json
+  charset_path: data/charset_from_labels.txt
+  batch_size: 128
+  num_workers: 4
+  prefetch_factor: 2
+  persistent_workers: false
+  timeout: 120  # seconds; detect stuck workers
+  # Preprocess & filtering
+  target_height: 48
+  target_width: 480
+  auto_rotate: false
+  auto_crop: false
+  min_fg_ratio: 0.0
+
+  # Lightweight on-the-fly augmentations (training only)
+  augment: true
+  aug_rotate_deg: 3       # ± degrees (weaker for early convergence)
+  aug_blur_prob: 0.1      # Gaussian blur probability
+  aug_noise_prob: 0.1     # Reduced noise for early phase
+  aug_noise_std: 3.0      # Noise std (0-255 scale)
+  aug_erase_prob: 0.02    # Reduced erasing for early phase
+  
+  # Character set
+  charset_path: data/charset_from_labels.txt
+  
+  # Text augmentation
+  train_transform:
+    - type: resize
+      height: 48
+      width: 160
+      keep_ratio: true
+      padding: true
+    - type: random_rotation
+      angle: 5
+    - type: random_blur
+      prob: 0.1
+    - type: normalize
+      mean: 0.5
+      std: 0.5
+    
+  val_transform:
+    - type: resize
+      height: 48
+      width: 160
+      keep_ratio: true
+      padding: true
+    - type: normalize
+      mean: 0.5
+      std: 0.5
+  
+  # Vertical text handling
+  vertical_text_ratio: 0.3
+  
+  # Synthetic data augmentation
+  use_synthetic_augment: true
+  synthetic_augment_prob: 0.5
+
+training:
+  epochs: 80
+  optimizer:
+    type: Adam
+    lr: 0.0003
+    betas: [0.9, 0.999]
+    weight_decay: 0.0000
+  
+  scheduler:
+    type: OneCycleLR
+    max_lr: 0.0005
+    pct_start: 0.1
+  
+  # Teacher forcing
+  teacher_forcing:
+    start: 1.0
+    end: 0.5
+  
+  # Label smoothing
+  label_smoothing: 0.0
+  
+  # Gradient accumulation
+  gradient_accumulation_steps: 2
+  
+  # Mixed precision
+  use_amp: false
+  
+  # EMA for better generalization
+  ema:
+    enable: true
+    decay: 0.999
+
+  # CTC auxiliary loss on vision branch
+  ctc:
+    weight: 0.3
+  
+  # Checkpointing
+  save_steps: 500
+  save_total_limit: 3
+  eval_steps: 500
+
+evaluation:
+  metrics:
+    - accuracy
+    - edit_distance
+    - cer  # character error rate
+  
+  # Beam search
+  beam_size: 5
+  
+  # Language model weight
+  lm_weight: 0.5
+
+inference:
+  # Batch processing
+  batch_size: 128
+  
+  # Post-processing
+  postprocess:
+    remove_duplicates: true
+    fix_common_errors: true
+    normalize_punctuation: true

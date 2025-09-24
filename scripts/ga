@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CMD=${1:-help}
+shift || true
+
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+PY=python3
+
+case "$CMD" in
+  login)
+    echo "Running: gh auth login"
+    gh auth login "$@"
+    ;;
+  status)
+    gh auth status || true
+    ;;
+  plan)
+    "$PY" "$ROOT_DIR/scripts/ga_sync.py" plan
+    ;;
+  sync)
+    SUB=${1:-all}
+    shift || true
+    case "$SUB" in
+      labels|milestones|issues|all)
+        "$PY" "$ROOT_DIR/scripts/ga_sync.py" sync "$SUB" "$@"
+        ;;
+      *)
+        echo "Usage: ga sync [labels|milestones|issues|all]" >&2
+        exit 2
+        ;;
+    esac
+    ;;
+  commit)
+    MSG=${1:-}
+    if [ -z "$MSG" ]; then
+      echo "Usage: ga commit \"<message>\"" >&2
+      exit 2
+    fi
+    git add -A
+    git commit -m "$MSG"
+    ;;
+  help|*)
+    cat <<'USAGE'
+ga - GitHub automation helper (gh CLI wrapper)
+
+Commands:
+  ga login                       # gh auth login (interactive)
+  ga status                      # gh auth status
+  ga plan                        # Show what will be created from config
+  ga sync labels                 # Create/Update labels from tools/pm/labels.json
+  ga sync milestones             # Create/Update milestones from tools/pm/milestones.json
+  ga sync issues                 # Create missing issues from tools/pm/issues.json
+  ga sync all                    # Run labels, milestones, and issues
+  ga commit "<message>"          # git add -A && git commit -m "<message>"
+
+Requirements:
+  - gh (GitHub CLI) installed and authenticated
+  - Config files under tools/pm/*.json
+USAGE
+    ;;
+esac
+

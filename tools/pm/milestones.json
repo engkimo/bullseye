@@ -1,0 +1,22 @@
+{
+  "milestones": [
+    {
+      "title": "M1: P0 - DI v1 & Bullseye integration",
+      "state": "open",
+      "description": "P0ブロッカーの解消（/v1/di/reprocess, /v1/di/jobs強化, bullseye切替, 評価自動化, ラベルマップ, 依存整理）",
+      "due_on": null
+    },
+    {
+      "title": "M2: P1 - Performance & UI",
+      "state": "open",
+      "description": "p95≤2s/頁の性能最適化、フロントUI拡張、.env/CORS/Nginxの整備",
+      "due_on": null
+    },
+    {
+      "title": "M3: P2 - Schema & Quality Gates",
+      "state": "open",
+      "description": "UDJ/Graph/Chartのスキーマ化、CI品質ゲートと評価の自動化",
+      "due_on": null
+    }
+  ]
+}

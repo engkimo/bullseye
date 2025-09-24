@@ -1,0 +1,121 @@
+# YOLO configuration for layout detection
+
+model:
+  name: yolo
+  version: v8
+  size: m  # n, s, m, l, x
+  num_classes: 13  # DocLayNet classes
+  
+  # Architecture modifications for documents
+  use_p2: false  # Don't need very small object detection
+  use_auxiliary_head: true
+
+data:
+  # 明示指定（推奨）: COCO互換の画像ディレクトリとアノテーションJSON
+  images_dir: data/synth_layout_ja/images
+  annotations: data/synth_layout_ja/annotations.json
+  batch_size: 8
+  num_workers: 4
+  
+  # Classes (DocLayNet compatible)
+  class_names:
+    - paragraph
+    - title
+    - section_heading
+    - caption
+    - figure
+    - table
+    - list
+    - footnote
+    - page_number
+    - header
+    - footer
+    - equation
+    - reference
+  
+  # Image augmentation
+  train_transform:
+    - type: resize
+      size: 1024
+    - type: mosaic
+      prob: 0.5
+    - type: mixup
+      prob: 0.3
+    - type: copy_paste
+      prob: 0.3
+    - type: random_flip
+      prob: 0.5
+    - type: random_scale
+      scale: [0.5, 1.5]
+    - type: color_jitter
+      brightness: 0.2
+      contrast: 0.2
+  
+  val_transform:
+    - type: resize
+      size: 1024
+
+training:
+  epochs: 10
+  optimizer:
+    type: AdamW
+    lr: 0.0002
+    weight_decay: 0.0001
+  
+  scheduler:
+    type: CosineAnnealingLR
+    T_max: 150
+    eta_min: 0.0001
+  
+  warmup:
+    epochs: 3
+    momentum: 0.8
+    bias_lr: 0.1
+  
+  # Loss weights (DETR)
+  loss:
+    cost_class: 1.0
+    cost_bbox: 5.0
+    cost_giou: 2.0
+    cls: 1.0
+    bbox: 5.0
+    giou: 2.0
+  
+  # Exponential moving average
+  ema:
+    enabled: true
+    decay: 0.9999
+  
+  # Mixed precision
+  use_amp: true
+  
+  # Multi-scale training
+  multi_scale:
+    enabled: true
+    range: [0.5, 1.5]
+    
+  # Checkpointing
+  save_period: 10
+  save_best: true
+
+evaluation:
+  # Metrics (placeholder)
+  metrics:
+    - mAP@0.5
+    - mAP@0.5:0.95
+
+inference:
+  # Image size
+  img_size: 1024
+  
+  # Confidence threshold
+  conf_threshold: 0.25
+  
+  # NMS
+  nms_threshold: 0.45
+  
+  # Test time augmentation
+  tta:
+    enabled: false
+    scales: [0.8, 1.0, 1.2]
+    flips: [horizontal]

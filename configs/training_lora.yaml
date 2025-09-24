@@ -1,0 +1,138 @@
+# LoRA training configuration for gpt-oss-20B
+
+model:
+  # Base model
+  model_name: gpt-oss-20B
+  
+  # LoRA configuration
+  lora:
+    r: 32
+    alpha: 32
+    dropout: 0.0
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+    
+  # Quantization
+  load_in_4bit: true
+  bnb_4bit_compute_dtype: float16
+  bnb_4bit_quant_type: nf4
+  bnb_4bit_use_double_quant: true
+
+data:
+  # Training data
+  data_path: data/mixed_train.jsonl
+  validation_split: 0.1
+  
+  # Data mixing ratios
+  general_ratio: 0.7
+  doc_ratio: 0.3
+  na_injection_rate: 0.25
+  
+  # Sequence length
+  max_seq_length: 8192
+  
+  # Padding
+  padding: right
+  truncation: true
+
+training:
+  # Basic settings
+  num_epochs: 3
+  batch_size: 1  # Per device
+  gradient_accumulation_steps: 16
+  learning_rate: 0.0002
+  weight_decay: 0.01
+  
+  # Optimizer
+  optim: adamw_8bit
+  
+  # Scheduler
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  
+  # Gradient
+  max_grad_norm: 0.3
+  gradient_checkpointing: true
+  
+  # Mixed precision
+  fp16: true
+  bf16: false  # Set based on hardware support
+  
+  # Logging
+  logging_steps: 10
+  
+  # Checkpointing
+  save_steps: 200
+  save_total_limit: 3
+  resume_from_checkpoint: true
+  
+  # Evaluation
+  do_eval: true
+  eval_steps: 200
+  evaluation_strategy: steps
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  greater_is_better: false
+  
+  # Other
+  group_by_length: true
+  ddp_find_unused_parameters: false
+  report_to:
+    - tensorboard
+  
+  # Output directory
+  output_dir: outputs/gpt-oss-docja-lora
+
+# OOM recovery settings
+oom_recovery:
+  enabled: true
+  max_retries: 3
+  adjustments:
+    - gradient_accumulation_steps: 32
+      max_seq_length: 4096
+    - gradient_accumulation_steps: 64
+      max_seq_length: 2048
+      lora_r: 16
+    - batch_size: 1
+      gradient_accumulation_steps: 128
+      max_seq_length: 1024
+      lora_r: 8
+
+# Unsloth optimizations
+unsloth:
+  enabled: true
+  use_gradient_checkpointing: true
+  use_rslora: false
+  use_flash_attention: true
+
+# S3 sync (for AWS deployment)
+s3_sync:
+  enabled: true
+  bucket: ${S3_BUCKET}
+  interval: 60  # seconds
+  exclude_patterns:
+    - "*.tmp"
+    - "*.lock"
+
+# Inference settings (for testing)
+inference:
+  max_new_tokens: 200
+  temperature: 0.1
+  top_p: 0.95
+  do_sample: true
+  num_beams: 1
+
+# Evaluation datasets
+evaluation:
+  datasets:
+    - jsquad
+    - jaquad
+    - docqa_test
+    - json_extract_test
+    - summary_test

@@ -1,0 +1,5 @@
+miniconda.sh
+models/bullseye/layout-rtdetrv2-v2/model.safetensors
+models/bullseye/rec-parseq-v2/model.safetensors
+models/bullseye/table-rtdetrv2/model.safetensors
+models/bullseye/det-dbnet-v2/model.safetensors

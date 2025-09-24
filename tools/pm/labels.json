@@ -1,0 +1,30 @@
+{
+  "labels": [
+    {"name": "P0", "color": "d73a4a", "description": "最優先（ブロッカー）"},
+    {"name": "P1", "color": "fbca04", "description": "高優先"},
+    {"name": "P2", "color": "0e8a16", "description": "中優先"},
+
+    {"name": "bug", "color": "b60205", "description": "不具合"},
+    {"name": "feature", "color": "a2eeef", "description": "新機能"},
+    {"name": "enhancement", "color": "84b6eb", "description": "改善"},
+    {"name": "docs", "color": "0075ca", "description": "ドキュメント"},
+    {"name": "api", "color": "1d76db", "description": "API関連"},
+    {"name": "performance", "color": "c2e0c6", "description": "性能最適化"},
+    {"name": "security", "color": "e99695", "description": "セキュリティ/運用"},
+    {"name": "frontend", "color": "7057ff", "description": "フロント/UI"},
+    {"name": "backend", "color": "0366d6", "description": "バックエンド/コア"},
+    {"name": "infra", "color": "5319e7", "description": "CI/Infra/ツール"},
+    {"name": "eval", "color": "c5def5", "description": "評価/メトリクス"},
+    {"name": "schema", "color": "cfd3d7", "description": "スキーマ/検証"},
+    {"name": "ci", "color": "0b3d91", "description": "CI/品質ゲート"},
+
+    {"name": "di-api", "color": "91ca55", "description": "Document Intelligence API"},
+    {"name": "llm", "color": "8a2be2", "description": "LLM統合"},
+    {"name": "layout", "color": "6f42c1", "description": "レイアウト解析"},
+    {"name": "table", "color": "d4c5f9", "description": "表構造認識"},
+    {"name": "recognition", "color": "bfe5bf", "description": "文字認識"},
+    {"name": "detection", "color": "f9d0c4", "description": "文字検出"},
+    {"name": "ops", "color": "f9d0c4", "description": "運用/DevOps"}
+  ]
+}
+

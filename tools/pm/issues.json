@@ -1,0 +1,70 @@
+{
+  "issues": [
+    {
+      "title": "Bullseyeアダプタ（検出/表）の参照順修正と依存追加（bootstrap強化）",
+      "body": "問題: 検出/表アダプタで参照順の不具合と依存不足（pyclipper/shapely/lxml/onnx/onnxruntime）。\n対応: アダプタ修正、scripts/bootstrap.sh に依存を追加。\n受入: bullseye固定でE2E通過、metadata.providersが bullseye で揃う。",
+      "labels": ["P0", "infra", "bug", "detection", "table"],
+      "milestone": "M1: P0 - DI v1 & Bullseye integration"
+    },
+    {
+      "title": "/v1/di/reprocess の実装（失敗/低信頼ページの再処理）",
+      "body": "目的: 失敗や低信頼ページのみの再処理APIを追加。\n仕様: POST /v1/di/reprocess {job_id, pages, options}。\n受入: unit/integrationテスト、Runbook/README反映。",
+      "labels": ["P0", "di-api", "backend", "feature"],
+      "milestone": "M1: P0 - DI v1 & Bullseye integration"
+    },
+    {
+      "title": "/v1/di/jobs の成果物保存とメトリクス集計の拡充",
+      "body": "目的: ページ別 *.unified.json と overlay PNG、metrics.jsonl にp50/p95集計。\n受入: /v1/di/jobs/:id に成果物リンクとp50/p95表示、vis_previewsが返る。",
+      "labels": ["P0", "di-api", "backend", "infra", "eval"],
+      "milestone": "M1: P0 - DI v1 & Bullseye integration"
+    },
+    {
+      "title": "scripts/run_eval.sh の実装（CER/HMean/mAP/TEDS/速度/VRAM→JSON/TSV＋閾値）",
+      "body": "目的: A/B/C評価を自動化し、JSON/TSVを成果物として保存。\n受入: 閾値で合否出力、CIから呼び出し可能。",
+      "labels": ["P0", "eval", "infra", "ci"],
+      "milestone": "M1: P0 - DI v1 & Bullseye integration"
+    },
+    {
+      "title": "DocLayNet互換ラベルマッピングの導入（configs/layout_label_map.yaml）",
+      "body": "目的: レイアウトクラスの整合性を確保。\n受入: マップ適用時にUDJと可視化が期待通りに一致。",
+      "labels": ["P0", "layout", "schema", "docs"],
+      "milestone": "M1: P0 - DI v1 & Bullseye integration"
+    },
+    {
+      "title": "Runbook更新: Gemma3(vLLM)のE2Eと .env 既定（bullseye固定/LLM設定/読み順簡易）",
+      "body": "目的: /v1/di/chat provider=gemma3 の手順と .env 既定を明文化。\n受入: docs/09_progress_and_runbook.md 追記、.env.sample 更新。",
+      "labels": ["P0", "docs", "llm", "ops"],
+      "milestone": "M1: P0 - DI v1 & Bullseye integration"
+    },
+    {
+      "title": "p95≤2s/頁に向けた性能最適化（tile/batch/streams, inference_mode+autocast, --lite統合）",
+      "body": "目的: no-vis条件でp95≤2秒/頁を達成。\n受入: 代表データでp95≤2秒、設定はconfigsとCLIに反映。",
+      "labels": ["P1", "performance", "backend"],
+      "milestone": "M2: P1 - Performance & UI"
+    },
+    {
+      "title": "フロント拡張（visページ/種類切替、履歴永続化、Gemma3画像添付トグル）",
+      "body": "目的: 解析結果の可視化/会話体験の向上。\n受入: UI上で切替・履歴保存・Gemma3画像ON/OFFが可能。",
+      "labels": ["P1", "frontend", "ui", "llm"],
+      "milestone": "M2: P1 - Performance & UI"
+    },
+    {
+      "title": "セキュリティ/運用: .env既定整理・CORS厳格化・Nginxリバプロ・JWT/RBAC設計",
+      "body": "目的: 本番運用の基礎整備。\n受入: .env.sample整備、Nginx設定例、CORS最小化、JWT/RBACの設計ドキュメント。",
+      "labels": ["P1", "security", "ops", "api", "docs"],
+      "milestone": "M2: P1 - Performance & UI"
+    },
+    {
+      "title": "UDJ/Graph/Chart のpydanticスキーマ化と schema.json 連携",
+      "body": "目的: Unified Doc JSON と Flow/Gantt の厳密スキーマを用意し検証可能にする。\n受入: pydanticモデルとschema.jsonを提供、検証スクリプトでOK。",
+      "labels": ["P2", "schema", "backend", "docs"],
+      "milestone": "M3: P2 - Schema & Quality Gates"
+    },
+    {
+      "title": "CI品質ゲート: run_eval.sh の統合と閾値判定（JSON/TSV成果物の公開）",
+      "body": "目的: CIでCER/HMean/mAP/TEDS/速度/VRAMを測定し閾値で合否。\n受入: CIログと成果物に指標/合否が載る。",
+      "labels": ["P2", "ci", "eval", "infra"],
+      "milestone": "M3: P2 - Schema & Quality Gates"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+# YOLO configuration for layout detection (Synth JA)
+
+model:
+  name: yolo
+  version: v8
+  size: n
+  num_classes: 13
+
+data:
+  images_dir: data/synth_layout_ja/images
+  annotations: data/synth_layout_ja/annotations.json
+  batch_size: 2
+  num_workers: 2
+  class_names:
+    - paragraph
+    - title
+    - section_heading
+    - caption
+    - figure
+    - table
+    - list
+    - footnote
+    - page_number
+    - header
+    - footer
+    - equation
+    - reference
+  train_transform:
+    - type: resize
+      size: 768
+  val_transform:
+    - type: resize
+      size: 768
+
+training:
+  epochs: 1
+  optimizer:
+    type: AdamW
+    lr: 0.0002
+    weight_decay: 0.0001
+  use_amp: true
+  save_period: 1
+
+evaluation:
+  metrics:
+    - mAP@0.5
+    - mAP@0.5:0.95
+
+inference:
+  img_size: 768
+  conf_threshold: 0.3
+  nms_threshold: 0.5

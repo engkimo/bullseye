@@ -1,0 +1,21 @@
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.10 python3.10-venv python3-pip libglib2.0-0 libgl1 && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY bullseye/src/bullseye /app/bullseye
+COPY server/requirements.txt /app/requirements.txt
+RUN python3 -m pip install --upgrade pip && pip install -r requirements.txt
+
+# FastAPIエントリポイント (例: server/app.py に app = FastAPI() を用意)
+COPY server /app/server
+
+EXPOSE 8080
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8080"]
