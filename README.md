@@ -257,6 +257,11 @@ bash scripts/bootstrap.sh
 ```
 
 ## Usage
+## Refactoring & Stability
+
+- We trialed a large directory refactor (core/pipeline/io) for Clean Code alignment, but rolled it back immediately because it broke upstream adapters and analysis paths. Stability takes priority.
+- The refactor plan is now incremental and safe. No breaking changes to public APIs/modules will be merged without shims and verifiable smoke tests.
+- See `docs/15_bullseye_refactor.md` for the staged plan, guardrails, and rollback notes.
 
 ### CLI
 
