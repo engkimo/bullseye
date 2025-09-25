@@ -52,7 +52,7 @@ def _priority_dfs(nodes, direction):
                         children.append(node)
                         stack.remove(node)
 
-                if direction in "top2bottom":
+                if direction == "top2bottom":
                     children = sorted(
                         children, key=lambda x: x.prop["box"][0], reverse=True
                     )
