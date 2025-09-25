@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import List, Tuple, Optional
+
 import cv2
 import os
 import torch
@@ -15,6 +19,9 @@ from .utils.visualizer import table_visualizer
 from .schemas import TableStructureRecognizerSchema
 from .utils.filters import filter_contained_rectangles_within_category
 from .utils.onnx_io import load_onnx_session_from_path
+from .utils.logger import set_logger
+
+logger = set_logger(__name__, "INFO")
 
 
 class TableStructureRecognizerModelCatalog(BaseModelCatalog):
@@ -149,15 +156,19 @@ class TableStructureRecognizer(BaseModule):
         dummy_input = torch.randn(1, 3, *img_size, requires_grad=True)
 
         import torch.onnx  # lazy import
-        torch.onnx.export(
-            self.model,
-            dummy_input,
-            path_onnx,
-            opset_version=16,
-            input_names=["input"],
-            output_names=["pred_logits", "pred_boxes"],
-            dynamic_axes=dynamic_axes,
-        )
+        from .exceptions import OnnxExportError
+        try:
+            torch.onnx.export(
+                self.model,
+                dummy_input,
+                path_onnx,
+                opset_version=16,
+                input_names=["input"],
+                output_names=["pred_logits", "pred_boxes"],
+                dynamic_axes=dynamic_axes,
+            )
+        except Exception as e:  # pragma: no cover
+            raise OnnxExportError(f"Failed to export table recognizer to ONNX: {e}")
 
     def preprocess(self, img, boxes):
         cv_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -178,7 +189,7 @@ class TableStructureRecognizer(BaseModule):
             )
         return table_imgs
 
-    def postprocess(self, preds, data):
+    def postprocess(self, preds, data) -> TableStructureRecognizerSchema:
         h, w = data["size"]
         orig_size = torch.tensor([w, h])[None].to(self.device)
         outputs = self.postprocessor(preds, orig_size, self.thresh_score)
@@ -248,13 +259,13 @@ class TableStructureRecognizer(BaseModule):
 
         return cells, rows, cols, spans
 
-    def __call__(self, img, table_boxes, vis=None):
+    def __call__(self, img, table_boxes, vis=None) -> Tuple[List[TableStructureRecognizerSchema], Optional[object]]:
         img_tensors = self.preprocess(img, table_boxes)
         outputs = []
         for data in img_tensors:
             if self.infer_onnx:
-                input = data["tensor"].numpy()
-                results = self.sess.run(None, {"input": input})
+                inputs = data["tensor"].numpy()
+                results = self.sess.run(None, {"input": inputs})
                 pred = {
                     "pred_logits": torch.tensor(results[0]).to(self.device),
                     "pred_boxes": torch.tensor(results[1]).to(self.device),
@@ -280,4 +291,5 @@ class TableStructureRecognizer(BaseModule):
                     table,
                 )
 
+        logger.debug("TableStructureRecognizer: %d tables", len(outputs))
         return outputs, vis

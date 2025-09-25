@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 
+from ..exceptions import OnnxLoadError
+
 
 def load_onnx_session(model_bytes: bytes, device: str = "cpu"):
     """
@@ -14,20 +16,30 @@ def load_onnx_session(model_bytes: bytes, device: str = "cpu"):
     import onnxruntime  # type: ignore
     import torch
 
-    model = onnx.load_model_from_string(model_bytes)
+    try:
+        model = onnx.load_model_from_string(model_bytes)
+    except Exception as e:  # pragma: no cover - defensive
+        raise OnnxLoadError(f"Failed to load ONNX model bytes: {e}")
 
     providers: Optional[Sequence[str]] = None
     if "cuda" in device and torch.cuda.is_available():
         providers = ["CUDAExecutionProvider"]
 
-    if providers is not None:
-        return onnxruntime.InferenceSession(model.SerializeToString(), providers=providers)
-    return onnxruntime.InferenceSession(model.SerializeToString())
+    try:
+        if providers is not None:
+            return onnxruntime.InferenceSession(
+                model.SerializeToString(), providers=providers
+            )
+        return onnxruntime.InferenceSession(model.SerializeToString())
+    except Exception as e:  # pragma: no cover - defensive
+        raise OnnxLoadError(f"Failed to create ONNX Runtime session: {e}")
 
 
 def load_onnx_session_from_path(path_onnx: str, device: str = "cpu"):
     """Load an ONNX model from file path with provider selection by device."""
-    with open(path_onnx, "rb") as f:
-        model_bytes = f.read()
+    try:
+        with open(path_onnx, "rb") as f:
+            model_bytes = f.read()
+    except FileNotFoundError as e:  # pragma: no cover
+        raise OnnxLoadError(f"ONNX file not found: {path_onnx}") from e
     return load_onnx_session(model_bytes, device=device)
-

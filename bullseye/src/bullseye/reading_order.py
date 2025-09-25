@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import List
+
 import cv2
 
 from .utils.graph import Node
@@ -11,7 +15,7 @@ def is_locked_node(node):
     return all([child.is_locked for child in node.children])
 
 
-def _priority_dfs(nodes, direction):
+def _priority_dfs(nodes: List[Node], direction: str):
     if len(nodes) == 0:
         return []
 
@@ -198,7 +202,7 @@ def _create_graph_left2right(nodes, x_weight=1, y_weight=5):
         node.children = sorted(node.children, key=lambda x: x.prop["box"][1])
 
 
-def prediction_reading_order(elements, direction, img=None):
+def prediction_reading_order(elements, direction: str, img=None):
     if len(elements) < 2:
         return elements
 

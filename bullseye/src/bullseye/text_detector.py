@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Tuple, Optional
+
 import numpy as np
 import torch
 import os
@@ -19,6 +23,9 @@ from .constants import ROOT_DIR
 from .schemas import TextDetectorSchema
 
 from .utils.onnx_io import load_onnx_session_from_path
+from .utils.logger import set_logger
+
+logger = set_logger(__name__, "INFO")
 
 
 class TextDetectorModelCatalog(BaseModelCatalog):
@@ -77,17 +84,22 @@ class TextDetector(BaseModule):
         dummy_input = torch.randn(1, 3, 256, 256, requires_grad=True)
 
         import torch.onnx  # lazy import
-        torch.onnx.export(
-            self.model,
-            dummy_input,
-            path_onnx,
-            opset_version=14,
-            input_names=["input"],
-            output_names=["output"],
-            dynamic_axes=dynamic_axes,
-        )
+        from .exceptions import OnnxExportError
 
-    def preprocess(self, img):
+        try:
+            torch.onnx.export(
+                self.model,
+                dummy_input,
+                path_onnx,
+                opset_version=14,
+                input_names=["input"],
+                output_names=["output"],
+                dynamic_axes=dynamic_axes,
+            )
+        except Exception as e:  # pragma: no cover
+            raise OnnxExportError(f"Failed to export detector to ONNX: {e}")
+
+    def preprocess(self, img: np.ndarray) -> torch.Tensor:
         img = img.copy()
         img = img[:, :, ::-1].astype(np.float32)
         resized = resize_shortest_edge(
@@ -97,22 +109,18 @@ class TextDetector(BaseModule):
         tensor = array_to_tensor(normalized)
         return tensor
 
-    def postprocess(self, preds, image_size):
+    def postprocess(self, preds, image_size: Tuple[int, int]) -> TextDetectorSchema:
         return self.post_processor(preds, image_size)
 
-    def __call__(self, img):
-        """apply the detection model to the input image.
-
-        Args:
-            img (np.ndarray): target image(BGR)
-        """
+    def __call__(self, img: np.ndarray) -> Tuple[TextDetectorSchema, Optional[np.ndarray]]:
+        """Apply the detection model to the input image (BGR)."""
 
         ori_h, ori_w = img.shape[:2]
         tensor = self.preprocess(img)
 
         if self.infer_onnx:
-            input = tensor.numpy()
-            results = self.sess.run(["output"], {"input": input})
+            inputs = tensor.numpy()
+            results = self.sess.run(["output"], {"input": inputs})
             preds = {"binary": torch.tensor(results[0])}
         else:
             with torch.inference_mode():
@@ -134,4 +142,5 @@ class TextDetector(BaseModule):
                 line_color=tuple(self._cfg.visualize.color[::-1]),
             )
 
+        logger.debug("TextDetector: %d quads", len(quads))
         return results, vis

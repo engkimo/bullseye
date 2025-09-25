@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Tuple, Optional
+
 import cv2
 import os
 import torch
@@ -10,7 +14,6 @@ from .base import BaseModelCatalog, BaseModule
 from .configs import LayoutParserRTDETRv2Config, LayoutParserRTDETRv2V2Config
 from .models import RTDETRv2
 from .postprocessor import RTDETRPostProcessor
-from .utils.misc import filter_by_flag, is_contained
 from .utils.visualizer import layout_visualizer
 
 from .schemas import LayoutParserSchema
@@ -19,6 +22,9 @@ from .utils.filters import (
     filter_contained_rectangles_across_categories,
 )
 from .utils.onnx_io import load_onnx_session_from_path
+from .utils.logger import set_logger
+
+logger = set_logger(__name__, "INFO")
 
 
 class LayoutParserModelCatalog(BaseModelCatalog):
@@ -91,24 +97,28 @@ class LayoutParser(BaseModule):
 
         # Lazy import onnx only when exporting
         import torch.onnx  # type: ignore
+        from .exceptions import OnnxExportError
 
-        torch.onnx.export(
-            self.model,
-            dummy_input,
-            path_onnx,
-            opset_version=16,
-            input_names=["input"],
-            output_names=["pred_logits", "pred_boxes"],
-            dynamic_axes=dynamic_axes,
-        )
+        try:
+            torch.onnx.export(
+                self.model,
+                dummy_input,
+                path_onnx,
+                opset_version=16,
+                input_names=["input"],
+                output_names=["pred_logits", "pred_boxes"],
+                dynamic_axes=dynamic_axes,
+            )
+        except Exception as e:  # pragma: no cover
+            raise OnnxExportError(f"Failed to export layout parser to ONNX: {e}")
 
-    def preprocess(self, img):
+    def preprocess(self, img) -> torch.Tensor:
         cv_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = Image.fromarray(cv_img)
         img_tensor = self.transforms(img)[None]
         return img_tensor
 
-    def postprocess(self, preds, image_size):
+    def postprocess(self, preds, image_size: Tuple[int, int]) -> LayoutParserSchema:
         h, w = image_size
         orig_size = torch.tensor([w, h])[None].to(self.device)
         outputs = self.postprocessor(preds, orig_size, self.thresh_score)
@@ -153,13 +163,13 @@ class LayoutParser(BaseModule):
 
         return category_elements
 
-    def __call__(self, img):
+    def __call__(self, img) -> Tuple[LayoutParserSchema, Optional[object]]:
         ori_h, ori_w = img.shape[:2]
         img_tensor = self.preprocess(img)
 
         if self.infer_onnx:
-            input = img_tensor.numpy()
-            results = self.sess.run(None, {"input": input})
+            inputs = img_tensor.numpy()
+            results = self.sess.run(None, {"input": inputs})
             preds = {
                 "pred_logits": torch.tensor(results[0]).to(self.device),
                 "pred_boxes": torch.tensor(results[1]).to(self.device),
@@ -179,4 +189,6 @@ class LayoutParser(BaseModule):
                 img,
             )
 
+        logger.debug("LayoutParser: paragraphs=%d tables=%d figures=%d",
+                     len(results.paragraphs), len(results.tables), len(results.figures))
         return results, vis

@@ -1,5 +1,5 @@
 """
-HuggingFace compatibility layer for KotaroKinoshita-style API.
+HuggingFace compatibility layer for bullseye-style API.
 Provides a familiar interface while using our custom models internally.
 """
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class DocJaProcessor:
-    """KotaroKinoshita-compatible processor interface."""
+    """bullseye-compatible processor interface."""
     
     def __init__(self, processor: DocumentProcessor):
         self.processor = processor
@@ -58,7 +58,7 @@ class DocJaProcessor:
                  extract_reading_order: bool = True,
                  return_tensors: Optional[str] = None,
                  **kwargs) -> Union[DocumentResult, Dict[str, Any]]:
-        """Process images with KotaroKinoshita-style interface."""
+        """Process images with bullseye-style interface."""
         
         # Handle single image
         if isinstance(images, str):

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import List, Tuple, Optional
+
 import numpy as np
 import torch
 import os
@@ -19,6 +23,9 @@ from .constants import ROOT_DIR
 from .schemas import TextRecognizerSchema
 
 from .utils.onnx_io import load_onnx_session_from_path
+from .utils.logger import set_logger
+
+logger = set_logger(__name__, "INFO")
 
 
 class TextRecognizerModelCatalog(BaseModelCatalog):
@@ -71,7 +78,7 @@ class TextRecognizer(BaseModule):
         if self.model is not None:
             self.model.to(self.device)
 
-    def preprocess(self, img, polygons):
+    def preprocess(self, img: np.ndarray, polygons):
         if polygons is None:
             h, w = img.shape[:2]
             polygons = [
@@ -88,9 +95,9 @@ class TextRecognizer(BaseModule):
 
         return dataloader, polygons
 
-    def _make_mini_batch(self, dataset):
-        mini_batches = []
-        mini_batch = []
+    def _make_mini_batch(self, dataset) -> List[torch.Tensor]:
+        mini_batches: List[torch.Tensor] = []
+        mini_batch: List[torch.Tensor] = []
         for data in dataset:
             data = torch.unsqueeze(data, 0)
             mini_batch.append(data)
@@ -104,9 +111,9 @@ class TextRecognizer(BaseModule):
 
         return mini_batches
 
-    def convert_onnx(self, path_onnx):
+    def convert_onnx(self, path_onnx: str):
         img_size = self._cfg.data.img_size
-        input = torch.randn(1, 3, *img_size, requires_grad=True)
+        dummy_inputs = torch.randn(1, 3, *img_size, requires_grad=True)
         dynamic_axes = {
             "input": {0: "batch_size"},
             "output": {0: "batch_size"},
@@ -114,18 +121,22 @@ class TextRecognizer(BaseModule):
 
         self.model.export_onnx = True
         import torch.onnx  # lazy import
-        torch.onnx.export(
-            self.model,
-            input,
-            path_onnx,
-            opset_version=14,
-            input_names=["input"],
-            output_names=["output"],
-            do_constant_folding=True,
-            dynamic_axes=dynamic_axes,
-        )
+        from .exceptions import OnnxExportError
+        try:
+            torch.onnx.export(
+                self.model,
+                dummy_inputs,
+                path_onnx,
+                opset_version=14,
+                input_names=["input"],
+                output_names=["output"],
+                do_constant_folding=True,
+                dynamic_axes=dynamic_axes,
+            )
+        except Exception as e:  # pragma: no cover
+            raise OnnxExportError(f"Failed to export recognizer to ONNX: {e}")
 
-    def postprocess(self, p, points):
+    def postprocess(self, p: torch.Tensor, points) -> Tuple[List[str], List[float], List[str]]:
         pred, score = self.tokenizer.decode(p)
         pred = [unicodedata.normalize("NFKC", x) for x in pred]
 
@@ -140,15 +151,8 @@ class TextRecognizer(BaseModule):
 
         return pred, score, directions
 
-    def __call__(self, img, points=None, vis=None):
-        """
-        Apply the recognition model to the input image.
-
-        Args:
-            img (np.ndarray): target image(BGR)
-            points (list): list of quadrilaterals. Each quadrilateral is represented as a list of 4 points sorted clockwise.
-            vis (np.ndarray, optional): rendering image. Defaults to None.
-        """
+    def __call__(self, img: np.ndarray, points=None, vis=None) -> Tuple[TextRecognizerSchema, Optional[np.ndarray]]:
+        """Apply the recognizer to image (BGR) with optional quads."""
 
         dataloader, points = self.preprocess(img, points)
         preds = []
@@ -156,8 +160,8 @@ class TextRecognizer(BaseModule):
         directions = []
         for data in dataloader:
             if self.infer_onnx:
-                input = data.numpy()
-                results = self.sess.run(["output"], {"input": input})
+                inputs = data.numpy()
+                results = self.sess.run(["output"], {"input": inputs})
                 p = torch.tensor(results[0])
             else:
                 with torch.inference_mode():
@@ -188,4 +192,5 @@ class TextRecognizer(BaseModule):
                 font_path=self._cfg.visualize.font,
             )
 
+        logger.debug("TextRecognizer: %d sequences", len(results.contents))
         return results, vis

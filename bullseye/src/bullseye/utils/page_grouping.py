@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-
 from ..reading_order import prediction_reading_order
 from ..utils.misc import calc_overlap_ratio, is_contained, quad_to_xyxy
 from ..schemas import ParagraphSchema, FigureSchema
@@ -94,4 +92,3 @@ def extract_words_within_element(pred_words, element):
     contained_words = "\n".join([content.contents for content in contained_words])
 
     return (contained_words, element_direction, check_list)
-
