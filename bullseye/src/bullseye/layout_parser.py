@@ -1,7 +1,5 @@
 import cv2
 import os
-import onnx
-import onnxruntime
 import torch
 import torchvision.transforms as T
 from PIL import Image
@@ -16,6 +14,11 @@ from .utils.misc import filter_by_flag, is_contained
 from .utils.visualizer import layout_visualizer
 
 from .schemas import LayoutParserSchema
+from .utils.filters import (
+    filter_contained_rectangles_within_category,
+    filter_contained_rectangles_across_categories,
+)
+from .utils.onnx_io import load_onnx_session_from_path
 
 
 class LayoutParserModelCatalog(BaseModelCatalog):
@@ -24,54 +27,6 @@ class LayoutParserModelCatalog(BaseModelCatalog):
         self.register("rtdetrv2", LayoutParserRTDETRv2Config, RTDETRv2)
         self.register("rtdetrv2v2", LayoutParserRTDETRv2V2Config, RTDETRv2)
 
-
-def filter_contained_rectangles_within_category(category_elements):
-    """同一カテゴリに属する矩形のうち、他の矩形の内側に含まれるものを除外"""
-
-    for category, elements in category_elements.items():
-        group_box = [element["box"] for element in elements]
-        check_list = [True] * len(group_box)
-        for i, box_i in enumerate(group_box):
-            for j, box_j in enumerate(group_box):
-                if i >= j:
-                    continue
-
-                ij = is_contained(box_i, box_j)
-                ji = is_contained(box_j, box_i)
-
-                box_i_area = (box_i[2] - box_i[0]) * (box_i[3] - box_i[1])
-                box_j_area = (box_j[2] - box_j[0]) * (box_j[3] - box_j[1])
-
-                # 双方から見て内包関係にある場合、面積の大きい方を残す
-                if ij and ji:
-                    if box_i_area > box_j_area:
-                        check_list[j] = False
-                    else:
-                        check_list[i] = False
-                elif ij:
-                    check_list[j] = False
-                elif ji:
-                    check_list[i] = False
-
-        category_elements[category] = filter_by_flag(elements, check_list)
-
-    return category_elements
-
-
-def filter_contained_rectangles_across_categories(category_elements, source, target):
-    """sourceカテゴリの矩形がtargetカテゴリの矩形に内包される場合、sourceカテゴリの矩形を除外"""
-
-    src_boxes = [element["box"] for element in category_elements[source]]
-    tgt_boxes = [element["box"] for element in category_elements[target]]
-
-    check_list = [True] * len(tgt_boxes)
-    for i, src_box in enumerate(src_boxes):
-        for j, tgt_box in enumerate(tgt_boxes):
-            if is_contained(src_box, tgt_box):
-                check_list[j] = False
-
-    category_elements[target] = filter_by_flag(category_elements[target], check_list)
-    return category_elements
 
 
 class LayoutParser(BaseModule):
@@ -120,14 +75,7 @@ class LayoutParser(BaseModule):
                 self.convert_onnx(path_onnx)
 
             self.model = None
-
-            model = onnx.load(path_onnx)
-            if torch.cuda.is_available() and device == "cuda":
-                self.sess = onnxruntime.InferenceSession(
-                    model.SerializeToString(), providers=["CUDAExecutionProvider"]
-                )
-            else:
-                self.sess = onnxruntime.InferenceSession(model.SerializeToString())
+            self.sess = load_onnx_session_from_path(path_onnx, device=device)
 
         if self.model is not None:
             self.model.to(self.device)
@@ -140,6 +88,9 @@ class LayoutParser(BaseModule):
 
         img_size = self._cfg.data.img_size
         dummy_input = torch.randn(1, 3, *img_size, requires_grad=True)
+
+        # Lazy import onnx only when exporting
+        import torch.onnx  # type: ignore
 
         torch.onnx.export(
             self.model,

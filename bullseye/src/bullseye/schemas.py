@@ -187,9 +187,6 @@ class FigureSchema(BaseSchema):
     paragraphs: List[ParagraphSchema] = Field(
         ..., description="List of paragraphs associated with the figure"
     )
-    order: Union[int, None] = Field(
-        ..., description="Order of the figure in the document"
-    )
     direction: Union[str, None] = Field(
         ..., description="Text direction, e.g., ['horizontal' or 'vertical']"
     )

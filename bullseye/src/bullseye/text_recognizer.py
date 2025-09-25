@@ -18,8 +18,7 @@ from .utils.visualizer import rec_visualizer
 from .constants import ROOT_DIR
 from .schemas import TextRecognizerSchema
 
-import onnx
-import onnxruntime
+from .utils.onnx_io import load_onnx_session_from_path
 
 
 class TextRecognizerModelCatalog(BaseModelCatalog):
@@ -67,14 +66,7 @@ class TextRecognizer(BaseModule):
                 self.convert_onnx(path_onnx)
 
             self.model = None
-
-            model = onnx.load(path_onnx)
-            if torch.cuda.is_available() and device == "cuda":
-                self.sess = onnxruntime.InferenceSession(
-                    model.SerializeToString(), providers=["CUDAExecutionProvider"]
-                )
-            else:
-                self.sess = onnxruntime.InferenceSession(model.SerializeToString())
+            self.sess = load_onnx_session_from_path(path_onnx, device=device)
 
         if self.model is not None:
             self.model.to(self.device)
@@ -121,6 +113,7 @@ class TextRecognizer(BaseModule):
         }
 
         self.model.export_onnx = True
+        import torch.onnx  # lazy import
         torch.onnx.export(
             self.model,
             input,

@@ -12,6 +12,7 @@ from .reading_order import prediction_reading_order
 from .utils.misc import calc_overlap_ratio, is_contained, quad_to_xyxy
 from .utils.visualizer import det_visualizer, reading_order_visualizer
 from .schemas import ParagraphSchema, FigureSchema, DocumentAnalyzerSchema
+from .utils.geometry import is_vertical, is_noise
 
 
 def combine_flags(flag1, flag2):
@@ -102,21 +103,6 @@ def extract_words_within_element(pred_words, element):
 
     return (contained_words, element_direction, check_list)
 
-
-def is_vertical(quad, thresh_aspect=2):
-    quad = np.array(quad)
-    width = np.linalg.norm(quad[0] - quad[1])
-    height = np.linalg.norm(quad[1] - quad[2])
-
-    return height > width * thresh_aspect
-
-
-def is_noise(quad, thresh=15):
-    quad = np.array(quad)
-    width = np.linalg.norm(quad[0] - quad[1])
-    height = np.linalg.norm(quad[1] - quad[2])
-
-    return width < thresh or height < thresh
 
 
 def recursive_update(original, new_data):

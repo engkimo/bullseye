@@ -18,8 +18,7 @@ from .utils.visualizer import det_visualizer
 from .constants import ROOT_DIR
 from .schemas import TextDetectorSchema
 
-import onnx
-import onnxruntime
+from .utils.onnx_io import load_onnx_session_from_path
 
 
 class TextDetectorModelCatalog(BaseModelCatalog):
@@ -62,14 +61,7 @@ class TextDetector(BaseModule):
                 self.convert_onnx(path_onnx)
 
             self.model = None
-
-            model = onnx.load(path_onnx)
-            if torch.cuda.is_available() and device == "cuda":
-                self.sess = onnxruntime.InferenceSession(
-                    model.SerializeToString(), providers=["CUDAExecutionProvider"]
-                )
-            else:
-                self.sess = onnxruntime.InferenceSession(model.SerializeToString())
+            self.sess = load_onnx_session_from_path(path_onnx, device=device)
 
             self.model = None
 
@@ -84,6 +76,7 @@ class TextDetector(BaseModule):
 
         dummy_input = torch.randn(1, 3, 256, 256, requires_grad=True)
 
+        import torch.onnx  # lazy import
         torch.onnx.export(
             self.model,
             dummy_input,

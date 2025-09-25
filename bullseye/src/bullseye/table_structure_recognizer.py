@@ -1,7 +1,5 @@
 import cv2
 import os
-import onnx
-import onnxruntime
 import torch
 import torchvision.transforms as T
 from PIL import Image
@@ -10,12 +8,13 @@ from .constants import ROOT_DIR
 
 from .base import BaseModelCatalog, BaseModule
 from .configs import TableStructureRecognizerRTDETRv2Config
-from .layout_parser import filter_contained_rectangles_within_category
 from .models import RTDETRv2
 from .postprocessor import RTDETRPostProcessor
 from .utils.misc import calc_intersection, filter_by_flag, is_contained
 from .utils.visualizer import table_visualizer
 from .schemas import TableStructureRecognizerSchema
+from .utils.filters import filter_contained_rectangles_within_category
+from .utils.onnx_io import load_onnx_session_from_path
 
 
 class TableStructureRecognizerModelCatalog(BaseModelCatalog):
@@ -135,14 +134,7 @@ class TableStructureRecognizer(BaseModule):
                 self.convert_onnx(path_onnx)
 
             self.model = None
-
-            model = onnx.load(path_onnx)
-            if torch.cuda.is_available() and device == "cuda":
-                self.sess = onnxruntime.InferenceSession(
-                    model.SerializeToString(), providers=["CUDAExecutionProvider"]
-                )
-            else:
-                self.sess = onnxruntime.InferenceSession(model.SerializeToString())
+            self.sess = load_onnx_session_from_path(path_onnx, device=device)
 
         if self.model is not None:
             self.model.to(self.device)
@@ -156,6 +148,7 @@ class TableStructureRecognizer(BaseModule):
         img_size = self._cfg.data.img_size
         dummy_input = torch.randn(1, 3, *img_size, requires_grad=True)
 
+        import torch.onnx  # lazy import
         torch.onnx.export(
             self.model,
             dummy_input,
