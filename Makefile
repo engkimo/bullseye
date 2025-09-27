@@ -34,6 +34,11 @@ help:
 	@echo "  make test           - Run tests"
 	@echo "  make lint           - Run linters"
 	@echo "  make clean          - Clean temporary files"
+	@echo ""
+	@echo "Git/Issues automation:"
+	@echo "  make commit M=\"msg\" [BRANCH=main]                - Commit and push"
+	@echo "  make commit-close M=\"msg\" I=\"1,2\" [BRANCH=main] - Commit, push, and close issues via gh"
+	@echo "  make close-last                                    - Close issues referenced by last commit"
 
 # Setup commands
 setup-local:
@@ -176,6 +181,19 @@ clean:
 	find . -type f -name ".DS_Store" -delete
 	rm -rf .pytest_cache .coverage htmlcov
 	rm -rf logs/*.log
+
+# Git + Issues (automation)
+BRANCH ?= main
+
+commit:
+	@git add -A && git commit -m "$(M)" || echo "No changes to commit"
+	@git push origin $(BRANCH)
+
+commit-close:
+	@bash scripts/gh_commit_close.sh -m "$(M)" -i "$(I)" -b "$(BRANCH)"
+
+close-last:
+	@bash scripts/gh_close_from_commit.sh
 
 # Docker commands
 docker-build:
