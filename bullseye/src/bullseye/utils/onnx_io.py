@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Optional, Sequence
+import os
 
 from ..exceptions import OnnxLoadError
 
@@ -22,7 +23,9 @@ def load_onnx_session(model_bytes: bytes, device: str = "cpu"):
         raise OnnxLoadError(f"Failed to load ONNX model bytes: {e}")
 
     providers: Optional[Sequence[str]] = None
-    if "cuda" in device and torch.cuda.is_available():
+    # Allow forcing CPU to avoid noisy GPU discovery warnings
+    force_cpu = os.getenv("DOCJA_ONNX_CPU", "0") == "1"
+    if (not force_cpu) and ("cuda" in device) and torch.cuda.is_available():
         providers = ["CUDAExecutionProvider"]
 
     try:

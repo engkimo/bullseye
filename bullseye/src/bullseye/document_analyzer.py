@@ -56,6 +56,7 @@ class DocumentAnalyzer:
         ignore_meta=False,
         reading_order="auto",
         split_text_across_cells=False,
+        provider=None,
     ):
         default_configs = {
             "ocr": {
@@ -89,16 +90,22 @@ class DocumentAnalyzer:
                 "configs must be a dict."
             )
 
-        self.text_detector = TextDetector(
-            **default_configs["ocr"]["text_detector"],
-        )
-        self.text_recognizer = TextRecognizer(
-            **default_configs["ocr"]["text_recognizer"]
-        )
+        if provider is not None:
+            # provider adapters implement the same call signature as existing modules
+            self.text_detector = provider.detector
+            self.text_recognizer = provider.recognizer
+            self.layout = provider.layout
+        else:
+            self.text_detector = TextDetector(
+                **default_configs["ocr"]["text_detector"],
+            )
+            self.text_recognizer = TextRecognizer(
+                **default_configs["ocr"]["text_recognizer"]
+            )
 
-        self.layout = LayoutAnalyzer(
-            configs=default_configs["layout_analyzer"],
-        )
+            self.layout = LayoutAnalyzer(
+                configs=default_configs["layout_analyzer"],
+            )
         self.visualize = visualize
 
         self.ignore_meta = ignore_meta

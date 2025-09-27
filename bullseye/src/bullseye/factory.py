@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+import os
+from typing import Optional
+
+from .providers.yomi import YomiProvider
+from .providers.base import ProviderConfig, BaseProvider
+from .engine.pipeline import DocumentEngine
+
+
+def get_provider(
+    name: Optional[str] = None,
+    device: str = "cuda",
+    visualize: bool = False,
+    infer_onnx: bool = False,
+) -> BaseProvider:
+    env_name = os.getenv("DOCJA_PROVIDER")
+    if os.getenv("DOCJA_FORCE_YOMITOKU") == "1":
+        env_name = "yomi"
+    provider_name = (name or env_name or "yomi").lower()
+    cfg = ProviderConfig(name=provider_name, device=device, visualize=visualize, infer_onnx=infer_onnx)
+
+    if provider_name in ("yomi", "yomitoku", "bullseye", "bullseye-yomi"):
+        return YomiProvider(cfg)
+    raise ValueError(f"Unknown provider: {provider_name}")
+
+
+def create_engine(provider: Optional[BaseProvider] = None, **provider_kwargs) -> DocumentEngine:
+    prov = provider or get_provider(**provider_kwargs)
+    return DocumentEngine(detector=prov.detector, recognizer=prov.recognizer, layout=prov.layout)
+

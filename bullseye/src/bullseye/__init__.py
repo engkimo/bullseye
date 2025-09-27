@@ -1,6 +1,8 @@
 from importlib.metadata import version
 
 from .document_analyzer import DocumentAnalyzer
+from .engine.pipeline import DocumentEngine
+from .factory import get_provider, create_engine
 from .layout_analyzer import LayoutAnalyzer
 from .layout_parser import LayoutParser
 from .ocr import OCR
@@ -16,5 +18,8 @@ __all__ = [
     "TextRecognizer",
     "LayoutAnalyzer",
     "DocumentAnalyzer",
+    "DocumentEngine",
+    "get_provider",
+    "create_engine",
 ]
 __version__ = version(__package__)
