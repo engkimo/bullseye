@@ -6,8 +6,8 @@ What it measures (if ground truth is available next to inputs):
  - Latency per page (p50/p95)
  - VRAM snapshot (MB)
  - CER for OCR (file.txt or file.gt.txt as ground truth)
- - TEDS for tables (requires `teds` if installed; otherwise skipped)
- - (Optional) QA ANLS/EM/F1 if <file>.qa.jsonl exists
+ - (Optional) TEDS for tables (requires `teds`; ground truth HTML discovery is best-effort)
+ - (Optional) QA metrics (ANLS / EM / F1) from a per-document QA JSONL and LLM answers
 
 Input discovery:
  - Scans `data/` by default for .pdf/.png/.jpg/.jpeg/.tif/.tiff
@@ -18,9 +18,15 @@ Outputs:
  - results/metrics/summary.json (aggregates)
 
 Usage:
+  # Latency/CER only
   python scripts/collect_metrics.py \
     --data-root data/ --out results/metrics \
     --cli bullseye --format json --with-llm false
+
+  # Include QA (run LLM per question in <stem>.qa.jsonl)
+  python scripts/collect_metrics.py \
+    --data-root data/ --out results/metrics \
+    --cli bullseye --format json --with-llm true --eval-qa true
 """
 from __future__ import annotations
 import argparse, csv, json, os, re, shlex, subprocess, sys, time, statistics
@@ -110,7 +116,45 @@ def flatten_text_from_udj(udj: Dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def run_docja(cli: str, path: Path, outdir: Path, with_llm: bool, fmt: str) -> Tuple[float, Optional[Dict[str, Any]]]:
+def _norm_text(s: str) -> str:
+    # Lightweight normalization for QA string matching
+    return re.sub(r"\s+", " ", (s or "").strip().lower())
+
+
+def f1_score(pred: str, truth: str) -> float:
+    p = _norm_text(pred).split()
+    t = _norm_text(truth).split()
+    if not p and not t:
+        return 1.0
+    if not p or not t:
+        return 0.0
+    common = {}
+    for tok in p:
+        common[tok] = min(p.count(tok), t.count(tok))
+    num_same = sum(common.values())
+    if num_same == 0:
+        return 0.0
+    precision = num_same / len(p)
+    recall = num_same / len(t)
+    return 2 * precision * recall / (precision + recall)
+
+
+def anls(pred: str, truth: str) -> float:
+    """Average Normalized Levenshtein Similarity for a single pair.
+    ANLS = 1 - min(levenshtein(pred, truth)/max(len(pred),len(truth)), 1.0)
+    """
+    p = _norm_text(pred)
+    t = _norm_text(truth)
+    if not p and not t:
+        return 1.0
+    if not p or not t:
+        return 0.0
+    denom = max(len(p), len(t))
+    return 1.0 - min(levenshtein(p, t) / max(1, denom), 1.0)
+
+
+def run_docja(cli: str, path: Path, outdir: Path, with_llm: bool, fmt: str,
+              llm_task: Optional[str] = None, question: Optional[str] = None) -> Tuple[float, Optional[Dict[str, Any]]]:
     outdir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     # Resolve CLI invocation. If 'bullseye' is requested, delegate to
@@ -139,6 +183,10 @@ def run_docja(cli: str, path: Path, outdir: Path, with_llm: bool, fmt: str) -> T
     ]
     if with_llm:
         cmd += ["--llm"]
+        if llm_task:
+            cmd += ["--llm-task", llm_task]
+        if question:
+            cmd += ["--question", question]
     try:
         subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     except subprocess.CalledProcessError as e:
@@ -147,19 +195,27 @@ def run_docja(cli: str, path: Path, outdir: Path, with_llm: bool, fmt: str) -> T
         sys.stderr.write(f"[WARN] docja failed on {path.name}: {e}\n")
         return lat, None
     lat = time.time() - t0
-    # Expect JSON Lines when -f json; otherwise skip UDJson load
+    # Expect JSON Lines when -f json; exporter may still use .json extension.
     if fmt == "json":
-        # Find first JSON/JSONL in outdir
-        candidates = list(outdir.glob("*.json")) + list(outdir.glob("*.jsonl"))
+        # Prefer .jsonl files, then .json
+        candidates = list(outdir.glob("*.jsonl")) + list(outdir.glob("*.json"))
         udj = None
         if candidates:
             fp = candidates[0]
             try:
-                if fp.suffix == ".jsonl":
-                    with fp.open("r", encoding="utf-8") as f:
-                        first = f.readline()
-                    udj = json.loads(first)
-                else:
+                # Robust: try first non-empty line (JSONL) first
+                with fp.open("r", encoding="utf-8") as f:
+                    for line in f:
+                        s = line.strip()
+                        if not s:
+                            continue
+                        try:
+                            udj = json.loads(s)
+                            break
+                        except Exception:
+                            # Fall back to full-file JSON parse once
+                            pass
+                if udj is None:
                     udj = json.loads(fp.read_text(encoding="utf-8"))
             except Exception as ex:
                 sys.stderr.write(f"[WARN] Failed to parse UDJ {fp}: {ex}\n")
@@ -182,6 +238,10 @@ def main() -> None:
     ap.add_argument("--cli", default="bullseye", type=str)
     ap.add_argument("--format", default="json", choices=["json", "md", "html", "csv", "pdf"])
     ap.add_argument("--with-llm", default="false", choices=["true", "false"])
+    ap.add_argument("--eval-qa", default="false", choices=["true", "false"],
+                    help="If true, look for <stem>.qa.jsonl and evaluate ANLS/EM/F1 by running LLM (requires --with-llm true)")
+    ap.add_argument("--teds", default="false", choices=["true", "false"],
+                    help="If true, attempt TEDS scoring for tables when GT html is discoverable and `teds` is installed")
     args = ap.parse_args()
 
     data_root = Path(args.data_root)
@@ -189,6 +249,8 @@ def main() -> None:
     outdir.mkdir(parents=True, exist_ok=True)
 
     with_llm = args.with_llm.lower() == "true"
+    do_qa = args.eval_qa.lower() == "true"
+    do_teds = args.teds.lower() == "true"
     inputs = discover_inputs(data_root)
     if not inputs:
         print(f"No inputs found under {data_root}")
@@ -217,11 +279,99 @@ def main() -> None:
             hyp = flatten_text_from_udj(udj)
             cer_val = cer(hyp, gt_txt)
 
+        qa_count = 0
+        qa_em_sum = 0.0
+        qa_f1_sum = 0.0
+        qa_anls_sum = 0.0
+
+        # Optional QA evaluation (per-document JSONL: {question, answer})
+        if do_qa and with_llm:
+            qa_path = path.with_suffix('.qa.jsonl')
+            if qa_path.exists():
+                try:
+                    with qa_path.open('r', encoding='utf-8') as f:
+                        for line in f:
+                            try:
+                                ex = json.loads(line)
+                            except Exception:
+                                continue
+                            q = ex.get('question')
+                            gt = ex.get('answer') or ex.get('answers')
+                            if isinstance(gt, list) and gt:
+                                # Use first as canonical; accept max over all for EM/F1/ANLS
+                                gt_list = [str(x) for x in gt]
+                                gt = gt_list[0]
+                            elif gt is None:
+                                continue
+                            # Run LLM QA for this question
+                            qlat, qudj = run_docja(args.cli, path, out_sub, True, 'json', llm_task='qa', question=q)
+                            _ans = None
+                            try:
+                                if qudj and isinstance(qudj.get('metadata',{}).get('llm',{}).get('qa'), dict):
+                                    _ans = qudj['metadata']['llm']['qa'].get('answer')
+                            except Exception:
+                                _ans = None
+                            if _ans is None:
+                                continue
+                            qa_count += 1
+                            qa_em_sum += 1.0 if _norm_text(_ans) == _norm_text(gt) else 0.0
+                            qa_f1_sum += f1_score(_ans, gt)
+                            qa_anls_sum += anls(_ans, gt)
+                except Exception as _e:
+                    sys.stderr.write(f"[WARN] QA eval failed for {qa_path.name}: {_e}\n")
+
+        # Optional TEDS (best-effort; requires teds)
+        teds_score = ""
+        if do_teds and udj is not None:
+            try:
+                from teds import TEDS  # type: ignore
+                scorer = TEDS()
+                # Discover GT table HTML: prefer <stem>.gt.html, then <stem>.html, else JSON list <stem>.tables.json
+                gt_htmls: List[str] = []
+                for cand in [path.with_suffix('.gt.html'), path.with_suffix('.html')]:
+                    if cand.exists():
+                        gt_htmls = [cand.read_text(encoding='utf-8', errors='ignore')]
+                        break
+                if not gt_htmls:
+                    j = path.with_suffix('.tables.json')
+                    if j.exists():
+                        try:
+                            arr = json.loads(j.read_text(encoding='utf-8'))
+                            if isinstance(arr, list):
+                                for x in arr:
+                                    h = (x.get('html') if isinstance(x, dict) else None)
+                                    if isinstance(h, str):
+                                        gt_htmls.append(h)
+                        except Exception:
+                            pass
+                pred_htmls: List[str] = []
+                try:
+                    for p in udj.get('pages', []):
+                        for t in p.get('tables', []):
+                            h = t.get('html')
+                            if isinstance(h, str) and h.strip():
+                                pred_htmls.append(h)
+                except Exception:
+                    pred_htmls = []
+                if gt_htmls and pred_htmls:
+                    # Compute mean TEDS over min(#gt,#pred)
+                    n = min(len(gt_htmls), len(pred_htmls))
+                    if n > 0:
+                        scores = [scorer.evaluate(pred_htmls[i], gt_htmls[i]) for i in range(n)]
+                        teds_score = round(sum(scores) / n, 4)
+            except Exception:
+                teds_score = ""
+
         rows.append({
             "file": str(path),
             "latency_s": round(lat, 3),
             "vram_mb": vram if vram is not None else "",
             "cer": round(cer_val, 4) if cer_val is not None else "",
+            "qa_count": qa_count if qa_count else "",
+            "qa_em": round(qa_em_sum / qa_count, 4) if qa_count else "",
+            "qa_f1": round(qa_f1_sum / qa_count, 4) if qa_count else "",
+            "qa_anls": round(qa_anls_sum / qa_count, 4) if qa_count else "",
+            "teds": teds_score,
         })
 
     # Write CSV

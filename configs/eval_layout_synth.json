@@ -1,0 +1,6 @@
+{
+  "images_dir": "data/synth_layout_ja/images",
+  "annotations": "data/synth_layout_ja/annotations.json",
+  "run_inference": true
+}
+
