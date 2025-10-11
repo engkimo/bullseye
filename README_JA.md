@@ -67,13 +67,10 @@ make eval-all
 ### Backend (FastAPI)
 
 ```bash
-# 最小ENV
-export DOCJA_API_KEY=dev-123                # 本番は強ランダムを使用
-export DOCJA_LLM_PROVIDER=ollama            # または gemma3|gptoss
-export DOCJA_OLLAMA_ENDPOINT=http://localhost:11434
-export DOCJA_OLLAMA_MODEL=gptoss-20b        # 例
+# 最小ENV（秘匿化・重複排除）
+export DOCJA_API_KEY=dev-123                # 本番は強ランダム
 export DOCJA_LLM_LANG=ja                    # 内部推論=en, 応答=ja
-export DOCJA_LLM_TIMEOUT=45
+export DOCJA_READING_ORDER_SIMPLE=1         # 大規模ページの安定化（任意）
 
 # bullseye（上流）プロバイダとリポジトリ
 export DOCJA_PROVIDER_ALIAS_LABEL=bullseye
@@ -82,12 +79,31 @@ export DOCJA_REC_PROVIDER=bullseye
 export DOCJA_LAYOUT_PROVIDER=bullseye
 export DOCJA_TABLE_PROVIDER=bullseye
 
-# bullseye の既定HFリポジトリ
+# 既定のHFリポジトリ（bullseye）
+export DOCJA_BULLSEYE_LOCAL_DIR="$PWD/bullseye/src"
 export DOCJA_BULLSEYE_DET_REPO=Ryousukee/bullseye-dbnet
 export DOCJA_BULLSEYE_REC_REPO=Ryousukee/bullseye-recparseq
 export DOCJA_BULLSEYE_LAYOUT_REPO=Ryousukee/bullseye-layoutrtdetrv
 export DOCJA_BULLSEYE_TABLE_REPO=Ryousukee/bullseye-tablertdetrv
-export DOCJA_BULLSEYE_LOCAL_DIR="$PWD/bullseye/src"
+
+# どちらか一方のプロバイダのみ設定してください
+
+## Provider: Ollama（既定）
+export DOCJA_LLM_PROVIDER=ollama
+export DOCJA_OLLAMA_ENDPOINT=http://localhost:11434
+export DOCJA_OLLAMA_MODEL=gptoss-20b
+export DOCJA_LLM_TIMEOUT=45
+
+## Provider: Gemma 3（OpenAI互換）
+# export DOCJA_LLM_PROVIDER=gemma3
+# export DOCJA_LLM_ENDPOINT=http://localhost:8000/v1
+# export DOCJA_LLM_MODEL=google/gemma-3-12b-it
+# export DOCJA_LLM_TIMEOUT=30
+# export DOCJA_LLM_USE_IMAGE=1
+
+# 任意（秘匿）: 外部で設定し、READMEには埋め込まない
+# export HUGGING_FACE_HUB_TOKEN=***
+# export OPENAI_API_KEY=***
 
 # (uv env)
 make setup-uv && source .venv/bin/activate

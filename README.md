@@ -69,13 +69,10 @@ Minimal environment variables and commands. See Advanced ENV in docs for tuning 
 ### Backend (FastAPI)
 
 ```bash
-# Minimal ENV
+# Minimal ENV (redacted and de-duplicated)
 export DOCJA_API_KEY=dev-123                # Use a strong random value in prod
-export DOCJA_LLM_PROVIDER=ollama            # or gemma3|gptoss
-export DOCJA_OLLAMA_ENDPOINT=http://localhost:11434
-export DOCJA_OLLAMA_MODEL=gptoss-20b        # example
 export DOCJA_LLM_LANG=ja                    # internal reasoning=en, responses=ja
-export DOCJA_LLM_TIMEOUT=45
+export DOCJA_READING_ORDER_SIMPLE=1         # optional stability for large pages
 
 # Bullseye (upstream) providers and repos
 export DOCJA_PROVIDER_ALIAS_LABEL=bullseye
@@ -85,11 +82,30 @@ export DOCJA_LAYOUT_PROVIDER=bullseye
 export DOCJA_TABLE_PROVIDER=bullseye
 
 # Default upstream repos (HF) for bullseye
+export DOCJA_BULLSEYE_LOCAL_DIR="$PWD/bullseye/src"
 export DOCJA_BULLSEYE_DET_REPO=Ryousukee/bullseye-dbnet
 export DOCJA_BULLSEYE_REC_REPO=Ryousukee/bullseye-recparseq
 export DOCJA_BULLSEYE_LAYOUT_REPO=Ryousukee/bullseye-layoutrtdetrv
 export DOCJA_BULLSEYE_TABLE_REPO=Ryousukee/bullseye-tablertdetrv
-export DOCJA_BULLSEYE_LOCAL_DIR="$PWD/bullseye/src"
+
+# Choose ONE provider block below (do not set both)
+
+## Provider: Ollama (default)
+export DOCJA_LLM_PROVIDER=ollama
+export DOCJA_OLLAMA_ENDPOINT=http://localhost:11434
+export DOCJA_OLLAMA_MODEL=gptoss-20b
+export DOCJA_LLM_TIMEOUT=45
+
+## Provider: Gemma 3 (OpenAI-compatible)
+# export DOCJA_LLM_PROVIDER=gemma3
+# export DOCJA_LLM_ENDPOINT=http://localhost:8000/v1
+# export DOCJA_LLM_MODEL=google/gemma-3-12b-it
+# export DOCJA_LLM_TIMEOUT=30
+# export DOCJA_LLM_USE_IMAGE=1
+
+# Optional (private): set externally, do not hardcode in README
+# export HUGGING_FACE_HUB_TOKEN=***
+# export OPENAI_API_KEY=***
 
 # (uv env)
 make setup-uv && source .venv/bin/activate
