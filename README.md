@@ -25,17 +25,21 @@
 
 ## Requirements
 
-- Python 3.10+
-- CUDA 11.8+ (GPU training/inference)
+- Python 3.12 (3.10+ compatible)
+- CUDA 12.1+ for GPU inference/training
 - AWS CLI configured (for cloud deployment)
-- 24GB+ GPU Memory (recommended: NVIDIA L4)
+- Hardware (minimum → recommended)
+  - CPU: 8 cores → 16 cores
+  - RAM: 32 GB → 64 GB
+  - GPU: 16 GB → L4 24 GB (target p95 ≤ 2s/page)
+  - Disk: free 100 GB → 300 GB
 
 ## Quick Start
 
 ```bash
-# Setup
-make setup-local
-source venv/bin/activate
+# Setup (uv recommended)
+make setup-uv
+source .venv/bin/activate
 
 # Run API (FastAPI)
 uvicorn src.api:app --host 0.0.0.0 --port 8001
@@ -56,74 +60,25 @@ make train-all
 make eval-all
 ```
 
-## Backend/Frontend: Run (ENV presets)
+## Backend/Frontend: Run
 
-以下はローカル実行のための環境変数プリセットと起動手順です（Ollama と vLLM いずれかが利用可能）。必要に応じて値を調整してください。
+最小限の環境変数と起動手順だけを記載します。詳細/チューニング用の変数は「Advanced ENV」参照。
 
 ### Backend (FastAPI)
 
 ```bash
-# 言語・LLM関連
-export DOCJA_LLM_LANG=ja
-export DOCJA_LLM_TIMEOUT=45
-export DOCJA_LLM_ENDPOINT=http://localhost:8000/v1/completions
-export DOCJA_LLM_MODEL=openai/gpt-oss-20b
-
-# Ollama プロバイダ
-export DOCJA_LLM_PROVIDER=ollama
+# Minimal ENV
+export DOCJA_API_KEY=dev-123                # 本番は強ランダム
+export DOCJA_LLM_PROVIDER=ollama            # or gemma3|gptoss
 export DOCJA_OLLAMA_ENDPOINT=http://localhost:11434
-export DOCJA_OLLAMA_MODEL=gpt-oss:20b
-export DOCJA_PROVIDER_ALIAS_LABEL=bullseye
+export DOCJA_OLLAMA_MODEL=gptoss-20b        # 例
+export DOCJA_LLM_LANG=ja                    # 推論は英語/応答はjaの運用に合致
+export DOCJA_LLM_TIMEOUT=45
 
-# 読み順（安定化）
-export DOCJA_READING_ORDER_SIMPLE=1
+# (uv env)
+make setup-uv && source .venv/bin/activate
 
-# PATH
-export PATH="$HOME/.local/bin:$PATH"
-
-# Hugging Face（必要に応じて設定）
-export HF_TOKEN=<your_hf_token>
-export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
-
-# Gantt 解析
-export DOCJA_GANTT_COL_THR=0.12
-export DOCJA_GANTT_HEADER_UP=120
-export DOCJA_GANTT_HEADER_DN=60
-export DOCJA_GANTT_MIN_COLS=14
-export DOCJA_GANTT_HMIN=5
-export DOCJA_GANTT_HMAX=30
-export DOCJA_GANTT_SMIN=60
-export DOCJA_GANTT_VMIN=120
-export DOCJA_GANTT_FORCE_CELL=1
-export DOCJA_GANTT_VK=11
-export DOCJA_GANTT_HK=9
-export DOCJA_GANTT_CELL_OCC_THR=12
-export DOCJA_GANTT_CELL_OCC_RATE=0.03
-export DOCJA_GANTT_DRAW_CELL_LINKS=0
-export DOCJA_GANTT_CELL_SMIN=40
-export DOCJA_GANTT_BAR_HMIN=5
-export DOCJA_GANTT_BAR_HMAX=45
-export DOCJA_GANTT_PALETTE_DIST2=1400
-
-# bullseye（上流ラッパを利用する場合）
-export DOCJA_DET_PROVIDER=bullseye
-export DOCJA_REC_PROVIDER=bullseye
-export DOCJA_LAYOUT_PROVIDER=bullseye
-export DOCJA_TABLE_PROVIDER=bullseye
-export DOCJA_BULLSEYE_LOCAL_DIR=$PWD/bullseye/src
-export DOCJA_BULLSEYE_DET_REPO=Ryousukee/bullseye-dbnet
-export DOCJA_BULLSEYE_REC_REPO=Ryousukee/bullseye-recparseq
-export DOCJA_BULLSEYE_LAYOUT_REPO=Ryousukee/bullseye-layoutrtdetrv
-export DOCJA_BULLSEYE_TABLE_REPO=Ryousukee/bullseye-tablertdetrv
-export DOCJA_VIS_PROFILE=clean
-
-# 仮想環境と依存
-conda deactivate || true
-uv venv --python 3.12
-source .venv/bin/activate
-uv pip install -r requirements.txt --upgrade
-
-# API 起動
+# Run API
 uvicorn src.api:app --host 0.0.0.0 --port 8001
 ```
 
@@ -136,98 +91,7 @@ npm run dev -- --host 0.0.0.0
 # 例: http://<HOST>:5173 をブラウザで開く
 ```
 
-### Batch Scripts (copy/paste)
 
-バックエンド/フロントの起動をワンコマンド化したスクリプト例です。必要に応じてパスやトークンを編集してから実行してください。
-
-```bash
-# Save as: scripts/dev_backend.sh
-#!/usr/bin/env bash
-set -euo pipefail
-
-# ===== ENV: LLM =====
-export DOCJA_LLM_LANG="ja"
-export DOCJA_LLM_TIMEOUT="45"
-export DOCJA_LLM_ENDPOINT="http://localhost:8000/v1/completions"
-export DOCJA_LLM_MODEL="openai/gpt-oss-20b"
-
-# ===== ENV: Ollama =====
-export DOCJA_LLM_PROVIDER="ollama"
-export DOCJA_OLLAMA_ENDPOINT="http://localhost:11434"
-export DOCJA_OLLAMA_MODEL="gpt-oss:20b"
-export DOCJA_PROVIDER_ALIAS_LABEL="bullseye"
-
-# ===== ENV: Reading Order / PATH =====
-export DOCJA_READING_ORDER_SIMPLE="1"
-export PATH="$HOME/.local/bin:$PATH"
-
-# ===== ENV: HF (optional) =====
-export HF_TOKEN="<YOUR_HF_TOKEN>"
-export HUGGING_FACE_HUB_TOKEN="$HF_TOKEN"
-
-# ===== ENV: Gantt =====
-export DOCJA_GANTT_COL_THR=0.12
-export DOCJA_GANTT_HEADER_UP=120
-export DOCJA_GANTT_HEADER_DN=60
-export DOCJA_GANTT_MIN_COLS=14
-export DOCJA_GANTT_HMIN=5
-export DOCJA_GANTT_HMAX=30
-export DOCJA_GANTT_SMIN=60
-export DOCJA_GANTT_VMIN=120
-export DOCJA_GANTT_FORCE_CELL=1
-export DOCJA_GANTT_VK=11
-export DOCJA_GANTT_HK=9
-export DOCJA_GANTT_CELL_OCC_THR=12
-export DOCJA_GANTT_CELL_OCC_RATE=0.03
-export DOCJA_GANTT_DRAW_CELL_LINKS=0
-export DOCJA_GANTT_CELL_SMIN=40
-export DOCJA_GANTT_BAR_HMIN=5
-export DOCJA_GANTT_BAR_HMAX=45
-export DOCJA_GANTT_PALETTE_DIST2=1400
-
-# ===== ENV: bullseye upstream (optional) =====
-export DOCJA_DET_PROVIDER="bullseye"
-export DOCJA_REC_PROVIDER="bullseye"
-export DOCJA_LAYOUT_PROVIDER="bullseye"
-export DOCJA_TABLE_PROVIDER="bullseye"
-export DOCJA_BULLSEYE_LOCAL_DIR="$PWD/bullseye/src"
-export DOCJA_BULLSEYE_DET_REPO="Ryousukee/bullseye-dbnet"
-export DOCJA_BULLSEYE_REC_REPO="Ryousukee/bullseye-recparseq"
-export DOCJA_BULLSEYE_LAYOUT_REPO="Ryousukee/bullseye-layoutrtdetrv"
-export DOCJA_BULLSEYE_TABLE_REPO="Ryousukee/bullseye-tablertdetrv"
-export DOCJA_VIS_PROFILE="clean"
-
-# ===== Venv & deps =====
-conda deactivate || true
-if command -v uv >/dev/null 2>&1; then
-  uv venv --python 3.12
-  source .venv/bin/activate
-  uv pip install -r requirements.txt --upgrade
-else
-  python3 -m venv .venv
-  source .venv/bin/activate
-  pip install -U pip && pip install -r requirements.txt
-fi
-
-exec uvicorn src.api:app --host 0.0.0.0 --port 8001
-```
-
-```bash
-# Save as: scripts/dev_frontend.sh
-#!/usr/bin/env bash
-set -euo pipefail
-cd front
-npm install
-exec npm run dev -- --host 0.0.0.0
-```
-
-実行例:
-
-```bash
-bash scripts/dev_backend.sh
-# 別ターミナル
-bash scripts/dev_frontend.sh
-```
 
 ## Installation
 
@@ -236,8 +100,8 @@ bash scripts/dev_frontend.sh
 ```bash
 git clone https://github.com/engkimo/bullseye.git
 cd docja
-make setup-local
-source venv/bin/activate
+make setup-uv
+source .venv/bin/activate
 ```
 
 ### AWS Deployment
@@ -477,11 +341,22 @@ Key configuration files:
 - `configs/training_lora.yaml`: LoRA training settings
 - `configs/vllm.yaml`: vLLM serving settings
 
-### Environment variables (抜粋)
-- `DOCJA_API_KEY`: REST認証（必須推奨）
-- `DOCJA_LLM_PROVIDER={ollama|gemma3|gptoss}` / `DOCJA_OLLAMA_*` / `DOCJA_LLM_ENDPOINT` など
-- `DOCJA_READING_ORDER_SIMPLE=1`（大規模ページの安定化）
-- `DOCJA_PROVIDER_ALIAS_LABEL=bullseye`（メタ表記統一）
+### Environment variables（コンパクト版）
+
+- Core
+  - `DOCJA_API_KEY`（本番必須）
+  - `DOCJA_LLM_PROVIDER`=`ollama|gemma3|gptoss`
+  - Provider別: `DOCJA_OLLAMA_ENDPOINT/MODEL` または `DOCJA_LLM_ENDPOINT/MODEL`
+  - `DOCJA_LLM_LANG`=`ja|en`（推論プロンプトは英語、応答はjaを推奨）
+- Runtime flags（任意）
+  - `DOCJA_READING_ORDER_SIMPLE=1`（大規模ページの安定化）
+  - `DOCJA_FORCE_YOMITOKU=1`, `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
+- Cache/Temp（容量対策・任意）
+  - `UV_CACHE_DIR=/mnt/uv-cache`
+  - `XDG_CACHE_HOME=/mnt/hf-cache`
+  - `TMPDIR=/mnt/tmp`
+
+詳細な可視化・Gantt/Flowのチューニングや bullseye 上流設定は `docs/requirements_definition/14_gemma3_yomitoku_integration.md` と `.env.sample` を参照してください。
 
 ## License
 

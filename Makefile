@@ -6,6 +6,7 @@ help:
 	@echo ""
 	@echo "Setup commands:"
 	@echo "  make setup-local    - Setup local development environment"
+	@echo "  make setup-uv       - Setup local env using uv (.venv)"
 	@echo "  make setup-aws      - Setup AWS environment"
 	@echo ""
 	@echo "Training commands:"
@@ -49,6 +50,16 @@ setup-local:
 	@echo "Creating directories..."
 	mkdir -p data/{raw,processed,samples} weights/{det,rec,layout,table,lora} configs logs results checkpoints
 	@echo "Setup complete! Activate with: source venv/bin/activate"
+
+PYVER ?= 3.12
+
+setup-uv:
+	@echo "Setting up local environment with uv (.venv, Python $(PYVER))..."
+	uv venv --python $(PYVER)
+	. .venv/bin/activate && uv pip install -r requirements.txt --upgrade
+	@echo "Creating directories..."
+	mkdir -p data/{raw,processed,samples} weights/{det,rec,layout,table,lora} configs logs results checkpoints
+	@echo "Setup complete! Activate with: source .venv/bin/activate"
 
 setup-aws: check-env
 	@echo "Setting up AWS environment..."
