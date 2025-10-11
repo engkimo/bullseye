@@ -75,6 +75,20 @@ export DOCJA_OLLAMA_MODEL=gptoss-20b        # 例
 export DOCJA_LLM_LANG=ja                    # 内部推論=en, 応答=ja
 export DOCJA_LLM_TIMEOUT=45
 
+# bullseye（上流）プロバイダとリポジトリ
+export DOCJA_PROVIDER_ALIAS_LABEL=bullseye
+export DOCJA_DET_PROVIDER=bullseye
+export DOCJA_REC_PROVIDER=bullseye
+export DOCJA_LAYOUT_PROVIDER=bullseye
+export DOCJA_TABLE_PROVIDER=bullseye
+
+# bullseye の既定HFリポジトリ
+export DOCJA_BULLSEYE_DET_REPO=Ryousukee/bullseye-dbnet
+export DOCJA_BULLSEYE_REC_REPO=Ryousukee/bullseye-recparseq
+export DOCJA_BULLSEYE_LAYOUT_REPO=Ryousukee/bullseye-layoutrtdetrv
+export DOCJA_BULLSEYE_TABLE_REPO=Ryousukee/bullseye-tablertdetrv
+export DOCJA_BULLSEYE_LOCAL_DIR="$PWD/bullseye/src"
+
 # (uv env)
 make setup-uv && source .venv/bin/activate
 
@@ -285,10 +299,10 @@ export DOCJA_OLLAMA_MODEL=gptoss-20b
   - `export DOCJA_LAYOUT_PROVIDER=bullseye`
   - `export DOCJA_TABLE_PROVIDER=bullseye`
   - HF重み（評価用途）: `export HF_TOKEN=…`
-    - `export DOCJA_BULLSEYE_DET_REPO=<user>/bullseye-dbnet`
-    - `export DOCJA_BULLSEYE_REC_REPO=<user>/bullseye-recparseq`
-    - `export DOCJA_BULLSEYE_LAYOUT_REPO=<user>/bullseye-layoutrtdetrv`
-    - `export DOCJA_BULLSEYE_TABLE_REPO=<user>/bullseye-tablertdetrv`
+    - `export DOCJA_BULLSEYE_DET_REPO=Ryousukee/bullseye-dbnet`
+    - `export DOCJA_BULLSEYE_REC_REPO=Ryousukee/bullseye-recparseq`
+    - `export DOCJA_BULLSEYE_LAYOUT_REPO=Ryousukee/bullseye-layoutrtdetrv`
+    - `export DOCJA_BULLSEYE_TABLE_REPO=Ryousukee/bullseye-tablertdetrv`
     - 認識器名の明示: `export DOCJA_BULLSEYE_REC_NAME=parseq|parseqv2`
 
 - ログ表記は `bullseye.*` に統一（重複ハンドラ除去）

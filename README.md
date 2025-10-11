@@ -77,6 +77,20 @@ export DOCJA_OLLAMA_MODEL=gptoss-20b        # example
 export DOCJA_LLM_LANG=ja                    # internal reasoning=en, responses=ja
 export DOCJA_LLM_TIMEOUT=45
 
+# Bullseye (upstream) providers and repos
+export DOCJA_PROVIDER_ALIAS_LABEL=bullseye
+export DOCJA_DET_PROVIDER=bullseye
+export DOCJA_REC_PROVIDER=bullseye
+export DOCJA_LAYOUT_PROVIDER=bullseye
+export DOCJA_TABLE_PROVIDER=bullseye
+
+# Default upstream repos (HF) for bullseye
+export DOCJA_BULLSEYE_DET_REPO=Ryousukee/bullseye-dbnet
+export DOCJA_BULLSEYE_REC_REPO=Ryousukee/bullseye-recparseq
+export DOCJA_BULLSEYE_LAYOUT_REPO=Ryousukee/bullseye-layoutrtdetrv
+export DOCJA_BULLSEYE_TABLE_REPO=Ryousukee/bullseye-tablertdetrv
+export DOCJA_BULLSEYE_LOCAL_DIR="$PWD/bullseye/src"
+
 # (uv env)
 make setup-uv && source .venv/bin/activate
 
@@ -290,10 +304,10 @@ This project ships an upstream‑compat wrapper called "bullseye". It can load l
   - `export DOCJA_LAYOUT_PROVIDER=bullseye`
   - `export DOCJA_TABLE_PROVIDER=bullseye`
   - HF weights (for evaluation): `export HF_TOKEN=…`
-    - `export DOCJA_BULLSEYE_DET_REPO=<user>/bullseye-dbnet`
-    - `export DOCJA_BULLSEYE_REC_REPO=<user>/bullseye-recparseq`
-    - `export DOCJA_BULLSEYE_LAYOUT_REPO=<user>/bullseye-layoutrtdetrv`
-    - `export DOCJA_BULLSEYE_TABLE_REPO=<user>/bullseye-tablertdetrv`
+    - `export DOCJA_BULLSEYE_DET_REPO=Ryousukee/bullseye-dbnet`
+    - `export DOCJA_BULLSEYE_REC_REPO=Ryousukee/bullseye-recparseq`
+    - `export DOCJA_BULLSEYE_LAYOUT_REPO=Ryousukee/bullseye-layoutrtdetrv`
+    - `export DOCJA_BULLSEYE_TABLE_REPO=Ryousukee/bullseye-tablertdetrv`
     - Explicit recognizer name: `export DOCJA_BULLSEYE_REC_NAME=parseq|parseqv2`
 
 - Logging labels are unified as `bullseye.*` (duplicate handlers removed).
