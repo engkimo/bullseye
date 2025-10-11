@@ -146,7 +146,7 @@ docja input.pdf \
   -v                   # Verbose logging
 
 # Providers (bullseye)
-# 環境変数またはCLIで bullseye プロバイダを指定可能
+# You can set the bullseye provider via env vars or CLI
 DOCJA_PROVIDER_ALIAS_LABEL=bullseye \
 python -m src.cli input.pdf -f json -o out \
   --rec-provider bullseye \
@@ -280,35 +280,35 @@ export DOCJA_OLLAMA_MODEL=gptoss-20b
 
 ## Bullseye Integration
 
-本プロジェクトは、上流互換ラッパを bullseye として同梱しています。ローカル上流（bullseye/src）またはHFのリポジトリから重みを取得し、`metadata.providers` を `bullseye-*` に正規化します。
+This project ships an upstream‑compat wrapper called "bullseye". It can load local upstream sources (`bullseye/src`) or HF‑hosted weights and normalizes `metadata.providers` to `bullseye-*`.
 
-- 必須/推奨環境変数（例）
+- Required/recommended environment variables (examples)
   - `export DOCJA_BULLSEYE_LOCAL_DIR=$PWD/bullseye/src`
   - `export DOCJA_PROVIDER_ALIAS_LABEL=bullseye`
   - `export DOCJA_DET_PROVIDER=bullseye`
   - `export DOCJA_REC_PROVIDER=bullseye`
   - `export DOCJA_LAYOUT_PROVIDER=bullseye`
   - `export DOCJA_TABLE_PROVIDER=bullseye`
-  - HF重み（評価用途）: `export HF_TOKEN=…`
+  - HF weights (for evaluation): `export HF_TOKEN=…`
     - `export DOCJA_BULLSEYE_DET_REPO=<user>/bullseye-dbnet`
     - `export DOCJA_BULLSEYE_REC_REPO=<user>/bullseye-recparseq`
     - `export DOCJA_BULLSEYE_LAYOUT_REPO=<user>/bullseye-layoutrtdetrv`
     - `export DOCJA_BULLSEYE_TABLE_REPO=<user>/bullseye-tablertdetrv`
-    - 認識器名の明示: `export DOCJA_BULLSEYE_REC_NAME=parseq|parseqv2`
+    - Explicit recognizer name: `export DOCJA_BULLSEYE_REC_NAME=parseq|parseqv2`
 
-- ログ表記は `bullseye.*` で統一（重複ハンドラは除去）
+- Logging labels are unified as `bullseye.*` (duplicate handlers removed).
 
-- 表構造認識の注意:
-  - bullseye表構造はレイアウトの table 領域（`table_boxes`）を前提とします。本パイプラインはレイアウト出力から自動抽出して渡すため、追加設定不要です。
+- Note on table structure:
+  - Bullseye's table module expects layout `table_boxes`. This pipeline extracts and forwards them automatically; no extra settings are required.
 
-## DI API v1（Unified Doc JSON / Flow / Gantt）
+## DI API v1 (Unified Doc JSON / Flow / Gantt)
 
-エンドポイント（抜粋）
-- `POST /v1/di/analyze`: OCR/レイアウト/表/読み順 → Unified Doc JSON（またはアーティファクト返却）
-- `POST /v1/di/reprocess`: 失敗/低信頼ページの再処理（将来拡張）
-- `GET /v1/di/jobs/{id}`: ページ粒度の状態/メトリクス/オーバレイ参照（将来拡張）
+Endpoints (excerpt)
+- `POST /v1/di/analyze`: Run OCR/layout/table/reading‑order → Unified Doc JSON (or return artifacts)
+- `POST /v1/di/reprocess`: Re‑run failed/low‑confidence pages (future extension)
+- `GET /v1/di/jobs/{id}`: Page‑level status/metrics/overlays (future extension)
 
-リクエスト例
+Request example
 ```bash
 curl -X POST http://localhost:8001/v1/di/analyze \
   -H 'x-api-key: $DOCJA_API_KEY' \
@@ -324,7 +324,7 @@ curl -X POST http://localhost:8001/v1/di/analyze \
   }'
 ```
 
-レスポンス（JSON指定時）
+Response (JSON output_format)
 ```json
 {
   "filename": "sample.pdf",
@@ -343,22 +343,22 @@ Key configuration files:
 - `configs/training_lora.yaml`: LoRA training settings
 - `configs/vllm.yaml`: vLLM serving settings
 
-### Environment variables（コンパクト版）
+### Environment variables (compact)
 
 - Core
-  - `DOCJA_API_KEY`（本番必須）
+  - `DOCJA_API_KEY` (required in production)
   - `DOCJA_LLM_PROVIDER`=`ollama|gemma3|gptoss`
-  - Provider別: `DOCJA_OLLAMA_ENDPOINT/MODEL` または `DOCJA_LLM_ENDPOINT/MODEL`
-  - `DOCJA_LLM_LANG`=`ja|en`（推論プロンプトは英語、応答はjaを推奨）
-- Runtime flags（任意）
-  - `DOCJA_READING_ORDER_SIMPLE=1`（大規模ページの安定化）
+  - Per provider: `DOCJA_OLLAMA_ENDPOINT/MODEL` or `DOCJA_LLM_ENDPOINT/MODEL`
+  - `DOCJA_LLM_LANG`=`ja|en` (internal prompts in English, responses in Japanese recommended)
+- Runtime flags (optional)
+  - `DOCJA_READING_ORDER_SIMPLE=1` (stability for large pages)
   - `DOCJA_FORCE_YOMITOKU=1`, `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
-- Cache/Temp（容量対策・任意）
+- Cache/Temp (optional, storage management)
   - `UV_CACHE_DIR=/mnt/uv-cache`
   - `XDG_CACHE_HOME=/mnt/hf-cache`
   - `TMPDIR=/mnt/tmp`
 
-詳細な可視化・Gantt/Flowのチューニングや bullseye 上流設定は `docs/requirements_definition/14_gemma3_yomitoku_integration.md` と `.env.sample` を参照してください。
+See `docs/requirements_definition/14_gemma3_yomitoku_integration.md` and `.env.sample` for visualization knobs, Flow/Gantt tuning, and upstream bullseye settings.
 
 ## License
 
