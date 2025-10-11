@@ -1,4 +1,6 @@
-# BullsEye - 日本語 Document AI Integration System
+# BullsEye - Japanese Document AI Integration System
+
+[English] | [日本語](README_JA.md)
 
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)
@@ -7,21 +9,21 @@
 ![CUDA](https://img.shields.io/badge/CUDA-12.1-green.svg)
 ![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB.svg)
 
-実務レベルの日本語文書処理を実現する統合AIシステム。OCR、レイアウト解析、表構造認識、読み順推定、LLM連携を提供。
+An integrated AI system for production‑grade Japanese document processing: OCR, layout analysis, table structure recognition, reading order, and LLM integration.
 
 <img width="3024" height="1702" alt="image" src="https://github.com/user-attachments/assets/2ee70864-ceaf-4969-bdb9-0888a76788c5" />
 
-**上流モデル群と互換性のある独自実装システム（bullseye統合）**
+Independent implementation with compatibility to upstream model families (bullseye integration).
 
 ## Features
 
-- **Text Detection**: DBNet++ / YOLO による高精度文字領域検出
-- **Text Recognition**: ABINet / SATRN による7,000字以上対応の文字認識（縦書き・手書き対応）
-- **Layout Detection**: DocLayNet互換のレイアウト解析（YOLO/DETR切替可能）
-- **Table Recognition**: TATR互換の表構造認識とセル抽出
-- **Reading Order**: グラフベースの読み順推定
-- **LLM Integration**: gpt-oss-20B による文書理解・QA・情報抽出
-- **Export**: HTML/Markdown/JSON/CSV/サーチャブルPDF出力
+- **Text Detection**: High‑accuracy region detection with DBNet++ / YOLO
+- **Text Recognition**: ABINet / SATRN with 7,000+ JP chars (vertical/handwriting)
+- **Layout Detection**: DocLayNet‑compatible classes (YOLO/DETR switchable)
+- **Table Recognition**: TATR‑like structure recognition and cell OCR
+- **Reading Order**: Graph‑based ordering with rule post‑processing
+- **LLM Integration**: gpt‑oss‑20B for QA/summary/extraction
+- **Export**: HTML/Markdown/JSON/CSV/Searchable‑PDF
 
 ## Requirements
 
@@ -62,17 +64,17 @@ make eval-all
 
 ## Backend/Frontend: Run
 
-最小限の環境変数と起動手順だけを記載します。詳細/チューニング用の変数は「Advanced ENV」参照。
+Minimal environment variables and commands. See Advanced ENV in docs for tuning knobs.
 
 ### Backend (FastAPI)
 
 ```bash
 # Minimal ENV
-export DOCJA_API_KEY=dev-123                # 本番は強ランダム
+export DOCJA_API_KEY=dev-123                # Use a strong random value in prod
 export DOCJA_LLM_PROVIDER=ollama            # or gemma3|gptoss
 export DOCJA_OLLAMA_ENDPOINT=http://localhost:11434
-export DOCJA_OLLAMA_MODEL=gptoss-20b        # 例
-export DOCJA_LLM_LANG=ja                    # 推論は英語/応答はjaの運用に合致
+export DOCJA_OLLAMA_MODEL=gptoss-20b        # example
+export DOCJA_LLM_LANG=ja                    # internal reasoning=en, responses=ja
 export DOCJA_LLM_TIMEOUT=45
 
 # (uv env)
@@ -88,7 +90,7 @@ uvicorn src.api:app --host 0.0.0.0 --port 8001
 cd front
 npm install
 npm run dev -- --host 0.0.0.0
-# 例: http://<HOST>:5173 をブラウザで開く
+# Example: open http://<HOST>:5173 in your browser
 ```
 
 
