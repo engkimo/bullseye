@@ -71,6 +71,7 @@ make eval-all
 export DOCJA_API_KEY=dev-123                # 本番は強ランダム
 export DOCJA_LLM_LANG=ja                    # 内部推論=en, 応答=ja
 export DOCJA_READING_ORDER_SIMPLE=1         # 大規模ページの安定化（任意）
+export DOCJA_VIS_PROFILE=clean              # オーバレイ描画: clean|debug|raw（UIはclean推奨）
 
 # bullseye（上流）プロバイダとリポジトリ
 export DOCJA_PROVIDER_ALIAS_LABEL=bullseye
@@ -377,6 +378,7 @@ curl -X POST http://localhost:8001/v1/di/analyze \
   - `DOCJA_LLM_LANG`=`ja|en`（内部プロンプト=英語、応答=日本語 推奨）
 - Runtime flags（任意）
   - `DOCJA_READING_ORDER_SIMPLE=1`（大規模ページの安定化）
+  - `DOCJA_VIS_PROFILE=clean|debug|raw`（UIはclean推奨）
   - `DOCJA_FORCE_YOMITOKU=1`, `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
 - Cache/Temp（容量対策・任意）
   - `UV_CACHE_DIR=/mnt/uv-cache`

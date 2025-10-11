@@ -73,6 +73,7 @@ Minimal environment variables and commands. See Advanced ENV in docs for tuning 
 export DOCJA_API_KEY=dev-123                # Use a strong random value in prod
 export DOCJA_LLM_LANG=ja                    # internal reasoning=en, responses=ja
 export DOCJA_READING_ORDER_SIMPLE=1         # optional stability for large pages
+export DOCJA_VIS_PROFILE=clean              # overlays: clean|debug|raw (clean recommended)
 
 # Bullseye (upstream) providers and repos
 export DOCJA_PROVIDER_ALIAS_LABEL=bullseye
@@ -382,6 +383,7 @@ Key configuration files:
   - `DOCJA_LLM_LANG`=`ja|en` (internal prompts in English, responses in Japanese recommended)
 - Runtime flags (optional)
   - `DOCJA_READING_ORDER_SIMPLE=1` (stability for large pages)
+  - `DOCJA_VIS_PROFILE=clean|debug|raw` (UI: clean recommended)
   - `DOCJA_FORCE_YOMITOKU=1`, `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
 - Cache/Temp (optional, storage management)
   - `UV_CACHE_DIR=/mnt/uv-cache`
