@@ -29,7 +29,7 @@ Usage:
     --cli bullseye --format json --with-llm true --eval-qa true
 """
 from __future__ import annotations
-import argparse, csv, json, os, re, shlex, subprocess, sys, time, statistics
+import argparse, csv, json, os, re, shlex, subprocess, sys, time, statistics, hashlib, socket, datetime
 from pathlib import Path
 import os
 from typing import Dict, Any, List, Optional, Tuple
@@ -153,8 +153,16 @@ def anls(pred: str, truth: str) -> float:
     return 1.0 - min(levenshtein(p, t) / max(1, denom), 1.0)
 
 
-def run_docja(cli: str, path: Path, outdir: Path, with_llm: bool, fmt: str,
-              llm_task: Optional[str] = None, question: Optional[str] = None) -> Tuple[float, Optional[Dict[str, Any]]]:
+def run_docja(
+    cli: str,
+    path: Path,
+    outdir: Path,
+    with_llm: bool,
+    fmt: str,
+    llm_task: Optional[str] = None,
+    question: Optional[str] = None,
+    force_bullseye: bool = True,
+) -> Tuple[float, Optional[Dict[str, Any]]]:
     outdir.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
     # Resolve CLI invocation. If 'bullseye' is requested, delegate to
@@ -162,11 +170,16 @@ def run_docja(cli: str, path: Path, outdir: Path, with_llm: bool, fmt: str,
     if cli.strip() == "bullseye":
         base_cmd = [sys.executable, "-m", "src.cli"]
         env = os.environ.copy()
-        env.setdefault("DOCJA_PROVIDER_ALIAS_LABEL", "bullseye")
-        env.setdefault("DOCJA_DET_PROVIDER", "bullseye")
-        env.setdefault("DOCJA_REC_PROVIDER", "bullseye")
-        env.setdefault("DOCJA_LAYOUT_PROVIDER", "bullseye")
-        env.setdefault("DOCJA_TABLE_PROVIDER", "bullseye")
+        # Enforce bullseye (yomitoku) providers and disable internal/HF fallbacks for traceable runs
+        if force_bullseye:
+            env["DOCJA_PROVIDER_ALIAS_LABEL"] = "bullseye"
+            env["DOCJA_DET_PROVIDER"] = "bullseye"
+            env["DOCJA_REC_PROVIDER"] = "bullseye"
+            env["DOCJA_LAYOUT_PROVIDER"] = "bullseye"
+            env["DOCJA_TABLE_PROVIDER"] = "bullseye"
+            env["DOCJA_FORCE_YOMITOKU"] = "1"
+            env["DOCJA_NO_INTERNAL_FALLBACK"] = "1"
+            env["DOCJA_NO_HF"] = "1"
     else:
         base_cmd = [cli]
         env = os.environ.copy()
@@ -242,6 +255,10 @@ def main() -> None:
                     help="If true, look for <stem>.qa.jsonl and evaluate ANLS/EM/F1 by running LLM (requires --with-llm true)")
     ap.add_argument("--teds", default="false", choices=["true", "false"],
                     help="If true, attempt TEDS scoring for tables when GT html is discoverable and `teds` is installed")
+    ap.add_argument("--limit", default="0", type=str,
+                    help="Optional max number of files to process (0 = no limit)")
+    ap.add_argument("--force-bullseye", default="true", choices=["true", "false"],
+                    help="Force bullseye providers and disable internal/HF fallbacks during runs")
     args = ap.parse_args()
 
     data_root = Path(args.data_root)
@@ -252,17 +269,72 @@ def main() -> None:
     do_qa = args.eval_qa.lower() == "true"
     do_teds = args.teds.lower() == "true"
     inputs = discover_inputs(data_root)
+    total_discovered = len(inputs)
+    limit = int(args.limit) if str(args.limit).isdigit() else 0
+    if limit and limit > 0:
+        inputs = inputs[:limit]
     if not inputs:
         print(f"No inputs found under {data_root}")
         sys.exit(0)
+
+    # Prepare run metadata & logs (traceability)
+    run_id = f"run-{int(time.time())}"
+    host = socket.gethostname()
+    ts_iso = datetime.datetime.utcnow().isoformat() + "Z"
+    events_path = outdir / "events.jsonl"
+    run_meta_path = outdir / "run.json"
+    outdir.mkdir(parents=True, exist_ok=True)
+    force_bullseye = args.force_bullseye.lower() == "true"
+    run_meta = {
+        "run_id": run_id,
+        "timestamp": ts_iso,
+        "host": host,
+        "data_root": str(data_root),
+        "out": str(outdir),
+        "cli": args.cli,
+        "format": args.format,
+        "with_llm": with_llm,
+        "eval_qa": do_qa,
+        "teds": do_teds,
+        "force_bullseye": force_bullseye,
+        "discovered": total_discovered,
+        "limit": limit or None,
+    }
+    run_meta_path.write_text(json.dumps(run_meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
     rows: List[Dict[str, Any]] = []
     latencies: List[float] = []
     vram_snaps: List[int] = []
 
-    for path in inputs:
+    def _sha256(fp: Path) -> str:
+        h = hashlib.sha256()
+        with fp.open("rb") as f:
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
+    for idx, path in enumerate(inputs, start=1):
         out_sub = outdir / path.stem
-        lat, udj = run_docja(args.cli, path, out_sub, with_llm, args.format)
+        # Emit BEGIN event
+        try:
+            file_hash = _sha256(path)
+        except Exception:
+            file_hash = ""
+        begin_evt = {
+            "run_id": run_id,
+            "event": "begin",
+            "index": idx,
+            "total": len(inputs),
+            "file": str(path),
+            "sha256": file_hash,
+            "ts": time.time(),
+        }
+        with events_path.open("a", encoding="utf-8") as ef:
+            ef.write(json.dumps(begin_evt, ensure_ascii=False) + "\n")
+
+        lat, udj = run_docja(
+            args.cli, path, out_sub, with_llm, args.format, force_bullseye=force_bullseye
+        )
         latencies.append(lat)
         vram = gpu_vram_mb()
         if vram is not None:
@@ -304,7 +376,9 @@ def main() -> None:
                             elif gt is None:
                                 continue
                             # Run LLM QA for this question
-                            qlat, qudj = run_docja(args.cli, path, out_sub, True, 'json', llm_task='qa', question=q)
+                            qlat, qudj = run_docja(
+                                args.cli, path, out_sub, True, 'json', llm_task='qa', question=q, force_bullseye=force_bullseye
+                            )
                             _ans = None
                             try:
                                 if qudj and isinstance(qudj.get('metadata',{}).get('llm',{}).get('qa'), dict):
@@ -362,6 +436,35 @@ def main() -> None:
             except Exception:
                 teds_score = ""
 
+        # Providers & per-page metrics (if present)
+        providers = None
+        page_metrics = None
+        try:
+            if udj and isinstance(udj.get("metadata", {}).get("providers"), dict):
+                providers = udj["metadata"]["providers"]
+            if udj and isinstance(udj.get("metadata", {}).get("metrics"), dict):
+                page_metrics = udj["metadata"]["metrics"]
+        except Exception:
+            providers = None
+            page_metrics = None
+
+        # Emit END event
+        end_evt = {
+            "run_id": run_id,
+            "event": "end",
+            "index": idx,
+            "total": len(inputs),
+            "file": str(path),
+            "latency_s": round(lat, 3),
+            "vram_mb": vram if vram is not None else None,
+            "providers": providers,
+            "page_metrics": page_metrics,
+            "ts": time.time(),
+        }
+        with events_path.open("a", encoding="utf-8") as ef:
+            ef.write(json.dumps(end_evt, ensure_ascii=False) + "\n")
+
+        # CSV row (summary per file)
         rows.append({
             "file": str(path),
             "latency_s": round(lat, 3),
@@ -372,7 +475,12 @@ def main() -> None:
             "qa_f1": round(qa_f1_sum / qa_count, 4) if qa_count else "",
             "qa_anls": round(qa_anls_sum / qa_count, 4) if qa_count else "",
             "teds": teds_score,
+            "providers": json.dumps(providers, ensure_ascii=False) if providers else "",
         })
+
+        # Lightweight progress to stdout
+        if idx == 1 or idx % 10 == 0 or idx == len(inputs):
+            print(f"[{run_id}] {idx}/{len(inputs)} done: {path.name} ({round(lat,3)}s)")
 
     # Write CSV
     csv_path = outdir / "metrics.csv"
