@@ -201,13 +201,39 @@ def run_docja(
         if question:
             cmd += ["--question", question]
     try:
-        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+        proc = subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
     except subprocess.CalledProcessError as e:
         # Keep going; record latency but UDJson missing
         lat = time.time() - t0
         sys.stderr.write(f"[WARN] docja failed on {path.name}: {e}\n")
+        # Persist CLI logs for traceability
+        try:
+            (outdir / "cli_stdout.log").write_text(
+                (e.stdout or b"").decode(errors="ignore"), encoding="utf-8"
+            )
+            (outdir / "cli_stderr.log").write_text(
+                (e.stderr or b"").decode(errors="ignore"), encoding="utf-8"
+            )
+        except Exception:
+            pass
         return lat, None
     lat = time.time() - t0
+    # Persist CLI logs for successful runs as well
+    try:
+        (outdir / "cli_stdout.log").write_text(
+            (proc.stdout or b"").decode(errors="ignore"), encoding="utf-8"
+        )
+        (outdir / "cli_stderr.log").write_text(
+            (proc.stderr or b"").decode(errors="ignore"), encoding="utf-8"
+        )
+    except Exception:
+        pass
     # Expect JSON Lines when -f json; exporter may still use .json extension.
     if fmt == "json":
         # Prefer .jsonl files, then .json
@@ -280,7 +306,7 @@ def main() -> None:
     # Prepare run metadata & logs (traceability)
     run_id = f"run-{int(time.time())}"
     host = socket.gethostname()
-    ts_iso = datetime.datetime.utcnow().isoformat() + "Z"
+    ts_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
     events_path = outdir / "events.jsonl"
     run_meta_path = outdir / "run.json"
     outdir.mkdir(parents=True, exist_ok=True)
