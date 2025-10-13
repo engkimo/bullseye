@@ -192,7 +192,7 @@ class DocumentProcessor:
                         rec_hf_model_id
                         or os.getenv('DOCJA_REC_MODEL_ID')
                         or os.getenv('DOCJA_BULLSEYE_REC_REPO')
-                        or None
+                        or 'Ryousukee/bullseye-recparseq'
                     )
                     self.text_recognizer = BullseyeParseqRecognizer(
                         model_id=model_id, device=self.device, no_hf=no_hf, fail_hard=no_internal_fallback
@@ -233,10 +233,12 @@ class DocumentProcessor:
         lay_prov = (layout_provider or 'internal').lower()
         if lay_prov == 'bullseye' and os.getenv('DOCJA_FORCE_BULLSEYE_SERVICE','0') == '1':
             lay_prov = 'bullseye-service'
-        if lay_prov in ('bullseye',) and layout_hf_model_id:
+        if lay_prov in ('bullseye',):
             try:
                 from ..integrations.bullseye_rtdetr import BullseyeRtDetrLayout
-                self.layout_detector = BullseyeRtDetrLayout(model_id=layout_hf_model_id, device=self.device, no_hf=no_hf)
+                # Use provided HF id for metadata if any; otherwise a canonical label
+                model_id = layout_hf_model_id or 'rtdetrv2'
+                self.layout_detector = BullseyeRtDetrLayout(model_id=model_id, device=self.device, no_hf=no_hf)
             except Exception as e:
                 logger.warning(f"Bullseye layout init failed: {e}")
                 if no_internal_fallback:

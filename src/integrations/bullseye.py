@@ -157,9 +157,17 @@ class BullseyeParseqRecognizer:
             mid = (self.model_id or '')
             model_name = 'parseqv2' if ('middle-v2' in mid or 'v2' in mid.lower()) else 'parseq'
         # local weights override (new var first)
-        # Prefer explicit HF repo id; local dir path is not accepted by HF validators
+        # Prefer explicit HF repo id; if absent, force local weights under models/bullseye/rec-parseq-v2
         hf_repo = (os.getenv('DOCJA_BULLSEYE_REC_REPO', '')).strip()
         path_cfg = self._make_tmp_cfg(hf_repo) if hf_repo else None
+        if path_cfg is None:
+            try:
+                from pathlib import Path as _P
+                local_weights = _P.cwd() / 'models' / 'bullseye' / 'rec-parseq-v2'
+                if local_weights.exists():
+                    path_cfg = self._make_tmp_cfg(str(local_weights))
+            except Exception:
+                pass
         self._recognizer_local = BZTextRecognizer(
             model_name=model_name,
             device='cuda' if (self.device == 'cuda') else 'cpu',

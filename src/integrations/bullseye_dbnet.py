@@ -82,6 +82,18 @@ class BullseyeDbnetDetector:
                 path_cfg = str(p)
             except Exception:
                 path_cfg = None
+        if path_cfg is None:
+            try:
+                from pathlib import Path as _P
+                local_weights = _P.cwd() / 'models' / 'bullseye' / 'det-dbnet-v2'
+                if local_weights.exists():
+                    import tempfile as _tmp
+                    d = _tmp.mkdtemp(prefix='docja_bullseye_det_')
+                    cfgp = _P(d) / 'cfg.yaml'
+                    cfgp.write_text(f"hf_hub_repo: '{str(local_weights)}'\n", encoding='utf-8')
+                    path_cfg = str(cfgp)
+            except Exception:
+                pass
 
         self._det = _BZTextDetector(
             model_name=self.model_name,

@@ -46,19 +46,19 @@ class BullseyeRtDetrLayout:
                     sys.modules['bullseye'] = b
                 file_path = Path(local_dir) / 'bullseye' / 'layout_parser.py'
                 spec = importlib.util.spec_from_file_location('bullseye.layout_parser', file_path)
-                if spec and spec.loader:
-                    m = importlib.util.module_from_spec(spec)
-                    sys.modules['bullseye.layout_parser'] = m
-                    spec.loader.exec_module(m)  # type: ignore
-                    try:
-                        from ..logging_filters import sanitize_bullseye_loggers, install_bullseye_log_filter
-                        install_bullseye_log_filter()
-                        sanitize_bullseye_loggers()
-                    except Exception:
-                        pass
-                    _LayoutParser = getattr(m, 'LayoutParser')
-                else:
+                if not (spec and spec.loader):
                     raise ImportError('spec loader not available')
+                m = importlib.util.module_from_spec(spec)
+                sys.modules['bullseye.layout_parser'] = m
+                spec.loader.exec_module(m)  # type: ignore
+                try:
+                    from ..logging_filters import sanitize_bullseye_loggers, install_bullseye_log_filter
+                    install_bullseye_log_filter()
+                    sanitize_bullseye_loggers()
+                except Exception:
+                    pass
+                _LayoutParser = getattr(m, 'LayoutParser')
+
                 # Prefer explicit HF repo id
                 hf_repo = (os.getenv('DOCJA_BULLSEYE_LAYOUT_REPO', '')).strip()
                 path_cfg = None
@@ -68,6 +68,19 @@ class BullseyeRtDetrLayout:
                     cfgp = Path(d) / 'cfg.yaml'
                     cfgp.write_text(f"hf_hub_repo: '{hf_repo}'\n", encoding='utf-8')
                     path_cfg = str(cfgp)
+                # Force local weights if no explicit repo is given
+                if path_cfg is None:
+                    try:
+                        from pathlib import Path as _P
+                        local_weights = _P.cwd() / 'models' / 'bullseye' / 'layout-rtdetrv2-v2'
+                        if local_weights.exists():
+                            import tempfile as _tmp
+                            d = _tmp.mkdtemp(prefix='docja_bullseye_layout_')
+                            cfgp = _P(d) / 'cfg.yaml'
+                            cfgp.write_text(f"hf_hub_repo: '{str(local_weights)}'\n", encoding='utf-8')
+                            path_cfg = str(cfgp)
+                    except Exception:
+                        pass
                 self._local_parser = _LayoutParser(
                     model_name='rtdetrv2v2',
                     device='cuda' if (self.device == 'cuda') else 'cpu',
@@ -78,8 +91,8 @@ class BullseyeRtDetrLayout:
                 self.torch = torch
                 self.model_label = 'local-rtdetrv2'
                 return
-                except Exception as e:
-                    raise RuntimeError(f'Local bullseye layout required but failed: {e}')
+            except Exception as e:
+                raise RuntimeError(f'Local bullseye layout required but failed: {e}')
 
         # HF path
         try:
@@ -135,6 +148,18 @@ class BullseyeRtDetrLayout:
                 cfgp = Path(d) / 'cfg.yaml'
                 cfgp.write_text(f"hf_hub_repo: '{hf_repo}'\n", encoding='utf-8')
                 path_cfg = str(cfgp)
+            if path_cfg is None:
+                try:
+                    from pathlib import Path as _P
+                    local_weights = _P.cwd() / 'models' / 'bullseye' / 'layout-rtdetrv2-v2'
+                    if local_weights.exists():
+                        import tempfile as _tmp
+                        d = _tmp.mkdtemp(prefix='docja_bullseye_layout_')
+                        cfgp = _P(d) / 'cfg.yaml'
+                        cfgp.write_text(f"hf_hub_repo: '{str(local_weights)}'\n", encoding='utf-8')
+                        path_cfg = str(cfgp)
+                except Exception:
+                    pass
             self._local_parser = _LayoutParser(
                 model_name='rtdetrv2v2',
                 device='cuda' if (self.device == 'cuda') else 'cpu',
