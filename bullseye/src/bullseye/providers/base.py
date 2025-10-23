@@ -6,7 +6,7 @@ from typing import Optional
 
 @dataclass
 class ProviderConfig:
-    name: str = "yomi"
+    name: str = "bullseye"
     device: str = "cuda"
     visualize: bool = False
     infer_onnx: bool = False

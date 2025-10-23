@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from .providers.yomi import YomiProvider
+from .providers.bullseye import BullseyeProvider
 from .providers.base import ProviderConfig, BaseProvider
 from .engine.pipeline import DocumentEngine
 
@@ -15,13 +15,11 @@ def get_provider(
     infer_onnx: bool = False,
 ) -> BaseProvider:
     env_name = os.getenv("DOCJA_PROVIDER")
-    if os.getenv("DOCJA_FORCE_YOMITOKU") == "1":
-        env_name = "yomi"
-    provider_name = (name or env_name or "yomi").lower()
+    provider_name = (name or env_name).lower()
     cfg = ProviderConfig(name=provider_name, device=device, visualize=visualize, infer_onnx=infer_onnx)
 
-    if provider_name in ("yomi", "yomitoku", "bullseye", "bullseye-yomi"):
-        return YomiProvider(cfg)
+    if provider_name in ("bullseye"):
+        return BullseyeProvider(cfg)
     raise ValueError(f"Unknown provider: {provider_name}")
 
 

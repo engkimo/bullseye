@@ -286,14 +286,12 @@ def run_docja(
     if cli.strip() == "bullseye":
         base_cmd = [sys.executable, "-m", "src.cli"]
         env = os.environ.copy()
-        # Enforce bullseye (yomitoku) providers and disable internal/HF fallbacks for traceable runs
         if force_bullseye:
             env["DOCJA_PROVIDER_ALIAS_LABEL"] = "bullseye"
             env["DOCJA_DET_PROVIDER"] = "bullseye"
             env["DOCJA_REC_PROVIDER"] = "bullseye"
             env["DOCJA_LAYOUT_PROVIDER"] = "bullseye"
             env["DOCJA_TABLE_PROVIDER"] = "bullseye"
-            env["DOCJA_FORCE_YOMITOKU"] = "1"
             env["DOCJA_NO_INTERNAL_FALLBACK"] = "1"
             env["DOCJA_NO_HF"] = "1"
             # Ensure local bullseye code/weights are discoverable

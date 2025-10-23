@@ -53,7 +53,7 @@ class _Table(TableStructureRecognizerIF):
         return self.impl(img)
 
 
-class YomiProvider(BaseProvider):
+class BullseyeProvider(BaseProvider):
     def __init__(self, cfg: Optional[ProviderConfig] = None) -> None:
         super().__init__(cfg)
         self.detector = _Detector(device=self.cfg.device, visualize=self.cfg.visualize, infer_onnx=self.cfg.infer_onnx)

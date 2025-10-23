@@ -1,1 +1,1 @@
-"""Provider adapters (yomi/internal) implementing core interfaces."""
+"""Provider adapters (internal) implementing core interfaces."""

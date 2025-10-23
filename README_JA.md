@@ -379,13 +379,13 @@ curl -X POST http://localhost:8001/v1/di/analyze \
 - Runtime flags（任意）
   - `DOCJA_READING_ORDER_SIMPLE=1`（大規模ページの安定化）
   - `DOCJA_VIS_PROFILE=clean|debug|raw`（UIはclean推奨）
-  - `DOCJA_FORCE_YOMITOKU=1`, `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
+  - `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
 - Cache/Temp（容量対策・任意）
   - `UV_CACHE_DIR=/mnt/uv-cache`
   - `XDG_CACHE_HOME=/mnt/hf-cache`
   - `TMPDIR=/mnt/tmp`
 
-詳細な可視化・Flow/Gantt 調整や bullseye 上流設定は `docs/requirements_definition/14_gemma3_yomitoku_integration.md` と `.env.sample` を参照してください。
+詳細な可視化・Flow/Gantt 調整や bullseye 上流設定は `.env.sample` を参照してください。
 
 ## ライセンス
 

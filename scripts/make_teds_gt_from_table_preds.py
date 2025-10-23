@@ -40,7 +40,6 @@ def ensure_bullseye_env(env: Dict[str, str]) -> Dict[str, str]:
     e["DOCJA_REC_PROVIDER"] = "bullseye"
     e["DOCJA_LAYOUT_PROVIDER"] = "bullseye"
     e["DOCJA_TABLE_PROVIDER"] = "bullseye"
-    e["DOCJA_FORCE_YOMITOKU"] = "1"
     e["DOCJA_NO_INTERNAL_FALLBACK"] = "1"
     e["DOCJA_NO_HF"] = "1"
     e.setdefault("DOCJA_BULLSEYE_LOCAL_DIR", str(Path.cwd() / "bullseye" / "src"))

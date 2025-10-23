@@ -384,13 +384,13 @@ Key configuration files:
 - Runtime flags (optional)
   - `DOCJA_READING_ORDER_SIMPLE=1` (stability for large pages)
   - `DOCJA_VIS_PROFILE=clean|debug|raw` (UI: clean recommended)
-  - `DOCJA_FORCE_YOMITOKU=1`, `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
+  - `DOCJA_NO_INTERNAL_FALLBACK=1`, `DOCJA_NO_HF=1`
 - Cache/Temp (optional, storage management)
   - `UV_CACHE_DIR=/mnt/uv-cache`
   - `XDG_CACHE_HOME=/mnt/hf-cache`
   - `TMPDIR=/mnt/tmp`
 
-See `docs/requirements_definition/14_gemma3_yomitoku_integration.md` and `.env.sample` for visualization knobs, Flow/Gantt tuning, and upstream bullseye settings.
+See `.env.sample` for visualization knobs, Flow/Gantt tuning, and upstream bullseye settings.
 
 ## License
 
